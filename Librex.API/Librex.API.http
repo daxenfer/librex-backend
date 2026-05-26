@@ -1,0 +1,6 @@
+@Librex.API_HostAddress = http://localhost:5176
+
+GET {{Librex.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
