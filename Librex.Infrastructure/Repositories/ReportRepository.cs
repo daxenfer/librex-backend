@@ -36,20 +36,66 @@ public class ReportRepository : IReportRepository
             .Select(g => new { g.Key.CustomerId, g.Key.Name, Total = g.Sum(d => d.Quantity * d.UnitPrice) })
             .ToListAsync();
 
-        var payments = await _context.Payments
+        var rawPayments = await _context.Payments
             .Where(p => p.IsActive && p.TenantId == tenantId)
-            .GroupBy(p => new { p.CustomerId, Name = p.Customer.Name })
-            .Select(g => new { g.Key.CustomerId, g.Key.Name, Total = g.Sum(p => p.Amount) })
+            .Select(p => new { p.RemissionId, p.CustomerId, CustomerName = p.Customer.Name, p.Amount })
             .ToListAsync();
+
+        Dictionary<int, (string Name, decimal Total)> paymentsDict;
+
+        if (publisherId.HasValue)
+        {
+            var remissionShares = await _context.RemissionDetails
+                .Where(d => d.IsActive && d.Remission.IsActive)
+                .GroupBy(d => new { d.RemissionId, d.Product.PublisherId })
+                .Select(g => new {
+                    g.Key.RemissionId,
+                    g.Key.PublisherId,
+                    Amount = g.Sum(d => d.Quantity * d.UnitPrice)
+                })
+                .ToListAsync();
+
+            var remissionTotals = remissionShares
+                .GroupBy(x => x.RemissionId)
+                .ToDictionary(g => g.Key, g => g.Sum(x => x.Amount));
+
+            var publisherAmountByRemission = remissionShares
+                .Where(x => x.PublisherId == publisherId.Value)
+                .ToDictionary(x => x.RemissionId, x => x.Amount);
+
+            paymentsDict = rawPayments
+                .GroupBy(p => new { p.CustomerId, p.CustomerName })
+                .ToDictionary(
+                    g => g.Key.CustomerId,
+                    g => (
+                        Name: g.Key.CustomerName,
+                        Total: g.Sum(p =>
+                        {
+                            var remTotal = remissionTotals.GetValueOrDefault(p.RemissionId);
+                            if (remTotal == 0) return 0m;
+                            var pubAmt = publisherAmountByRemission.GetValueOrDefault(p.RemissionId);
+                            return p.Amount * (pubAmt / remTotal);
+                        })
+                    )
+                );
+        }
+        else
+        {
+            paymentsDict = rawPayments
+                .GroupBy(p => new { p.CustomerId, p.CustomerName })
+                .ToDictionary(
+                    g => g.Key.CustomerId,
+                    g => (Name: g.Key.CustomerName, Total: g.Sum(p => p.Amount))
+                );
+        }
 
         var allCustomerIds = sales.Select(s => s.CustomerId)
             .Union(returns.Select(r => r.CustomerId))
-            .Union(payments.Select(p => p.CustomerId))
+            .Union(paymentsDict.Keys)
             .Distinct();
 
         var salesDict = sales.ToDictionary(s => s.CustomerId, s => (s.Name, s.Total));
         var returnsDict = returns.ToDictionary(r => r.CustomerId, r => r.Total);
-        var paymentsDict = payments.ToDictionary(p => p.CustomerId, p => (p.Name, p.Total));
 
         var rows = allCustomerIds
             .Select(cid =>

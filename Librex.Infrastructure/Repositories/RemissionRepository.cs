@@ -34,6 +34,7 @@ public class RemissionRepository : IRemissionRepository
     public async Task<IEnumerable<Remission>> GetAllWithCustomerAsync()
         => await _context.Remissions
             .Include(r => r.Customer)
+            .Include(r => r.Details)
             .Where(r => r.IsActive)
             .OrderByDescending(r => r.Date)
             .ToListAsync();
