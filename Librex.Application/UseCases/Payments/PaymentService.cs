@@ -24,7 +24,7 @@ public class PaymentService : IPaymentService
 
     public async Task<PaymentDto> CreateAsync(CreatePaymentDto dto)
     {
-        var folio = await _repository.GetNextFolioAsync(tenantId: 1);
+        var folio = await _repository.GetNextFolioAsync();
 
         var payment = new Payment
         {

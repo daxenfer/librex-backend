@@ -20,7 +20,6 @@ public static class DatabaseInitializer
                 Role = "Administrator",
                 CreatedAt = DateTime.UtcNow,
                 IsActive = true,
-                TenantId = 1,
             });
             await context.SaveChangesAsync();
         }

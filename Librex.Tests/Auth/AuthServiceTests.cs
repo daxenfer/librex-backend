@@ -37,8 +37,7 @@ public class AuthServiceTests
             {
                 Id = 1, Username = "admin", PasswordHash = hash,
                 FullName = "System Administrator", Role = "Administrator",
-                IsActive = true, TenantId = 1,
-            });
+                IsActive = true             });
 
         var result = await _sut.LoginAsync(new LoginDto { Username = "admin", Password = "Admin1234" });
 
@@ -58,8 +57,7 @@ public class AuthServiceTests
             .ReturnsAsync(new User
             {
                 Id = 1, Username = "admin", PasswordHash = hash,
-                FullName = "Admin", Role = "Administrator", IsActive = true, TenantId = 1,
-            });
+                FullName = "Admin", Role = "Administrator", IsActive = true             });
 
         var result = await _sut.LoginAsync(new LoginDto { Username = "admin", Password = "WrongPassword" });
 
@@ -85,8 +83,7 @@ public class AuthServiceTests
             .ReturnsAsync(new User
             {
                 Id = 2, Username = "disabled", PasswordHash = hash,
-                FullName = "Disabled User", Role = "Administrator", IsActive = false, TenantId = 1,
-            });
+                FullName = "Disabled User", Role = "Administrator", IsActive = false             });
 
         var result = await _sut.LoginAsync(new LoginDto { Username = "disabled", Password = "Admin1234" });
 
@@ -101,8 +98,7 @@ public class AuthServiceTests
             .ReturnsAsync(new User
             {
                 Id = 5, Username = "testuser", PasswordHash = hash,
-                FullName = "Test User", Role = "Staff", IsActive = true, TenantId = 1,
-            });
+                FullName = "Test User", Role = "Staff", IsActive = true             });
 
         var result = await _sut.LoginAsync(new LoginDto { Username = "testuser", Password = "Pass123" });
 

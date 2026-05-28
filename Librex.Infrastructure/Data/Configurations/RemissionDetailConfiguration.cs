@@ -10,7 +10,7 @@ public class RemissionDetailConfiguration : IEntityTypeConfiguration<RemissionDe
     {
         builder.ToTable("remission_details");
         builder.HasKey(d => d.Id);
-        builder.Property(d => d.City).HasMaxLength(100);
+        builder.Property(d => d.Teacher).HasMaxLength(200);
         builder.Property(d => d.Quantity).HasColumnType("numeric(10,2)");
         builder.Property(d => d.UnitPrice).HasColumnType("numeric(10,2)");
 

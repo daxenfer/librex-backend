@@ -24,21 +24,25 @@ public class RemissionService : IRemissionService
 
     public async Task<RemissionDto> CreateAsync(CreateRemissionDto dto)
     {
-        var folio = await _repository.GetNextFolioAsync(tenantId: 1);
+        var folio = await _repository.GetNextFolioAsync();
 
         var remission = new Remission
         {
             FolioNumber = folio,
             CustomerId = dto.CustomerId,
-            Date = dto.Date,
+            Date = DateTime.UtcNow,
             SalesPerson = dto.SalesPerson,
             Notes = dto.Notes,
             RecipientName = dto.RecipientName,
-            Discount = dto.Discount,
+            Discount = dto.DiscountPercentage,
+            DeliveryDate = dto.DeliveryDate,
+            PaymentDueDate = dto.PaymentDueDate,
+            ReturnPercentage = dto.ReturnPercentage,
+            ReturnDueDate = dto.ReturnDueDate,
             Details = dto.Details.Select(d => new RemissionDetail
             {
                 ProductId = d.ProductId,
-                City = d.City,
+                Teacher = d.Teacher,
                 Quantity = d.Quantity,
                 UnitPrice = d.UnitPrice,
             }).ToList(),
@@ -55,11 +59,14 @@ public class RemissionService : IRemissionService
         if (remission is null) return null;
 
         remission.CustomerId = dto.CustomerId;
-        remission.Date = dto.Date;
         remission.SalesPerson = dto.SalesPerson;
         remission.Notes = dto.Notes;
         remission.RecipientName = dto.RecipientName;
-        remission.Discount = dto.Discount;
+        remission.Discount = dto.DiscountPercentage;
+        remission.DeliveryDate = dto.DeliveryDate;
+        remission.PaymentDueDate = dto.PaymentDueDate;
+        remission.ReturnPercentage = dto.ReturnPercentage;
+        remission.ReturnDueDate = dto.ReturnDueDate;
         remission.IsActive = dto.IsActive;
 
         remission.Details.Clear();
@@ -68,7 +75,7 @@ public class RemissionService : IRemissionService
             remission.Details.Add(new RemissionDetail
             {
                 ProductId = d.ProductId,
-                City = d.City,
+                Teacher = d.Teacher,
                 Quantity = d.Quantity,
                 UnitPrice = d.UnitPrice,
             });
@@ -95,13 +102,14 @@ public class RemissionService : IRemissionService
             ProductId = d.ProductId,
             ProductName = d.Product?.Name ?? string.Empty,
             PublisherName = d.Product?.Publisher?.Name,
-            City = d.City,
+            Teacher = d.Teacher,
             Quantity = d.Quantity,
             UnitPrice = d.UnitPrice,
             Amount = d.Quantity * d.UnitPrice,
         }).ToList();
 
         var subtotal = details.Sum(d => d.Amount);
+        var discountAmount = subtotal * r.Discount / 100m;
 
         return new RemissionDto
         {
@@ -110,13 +118,23 @@ public class RemissionService : IRemissionService
             FolioFormatted = r.FolioNumber.ToString("D6"),
             CustomerId = r.CustomerId,
             CustomerName = r.Customer?.Name ?? string.Empty,
+            CustomerAddress = r.Customer?.Address ?? string.Empty,
+            CustomerPostalCode = r.Customer?.PostalCode ?? string.Empty,
+            CustomerPhone = r.Customer?.Phone ?? string.Empty,
+            CustomerCity = r.Customer?.City ?? string.Empty,
             Date = r.Date,
+            CreatedAt = r.CreatedAt,
             SalesPerson = r.SalesPerson,
             Notes = r.Notes,
             RecipientName = r.RecipientName,
-            Discount = r.Discount,
+            DeliveryDate = r.DeliveryDate,
+            PaymentDueDate = r.PaymentDueDate,
+            ReturnPercentage = r.ReturnPercentage,
+            ReturnDueDate = r.ReturnDueDate,
+            DiscountPercentage = r.Discount,
+            DiscountAmount = discountAmount,
             Subtotal = subtotal,
-            Total = subtotal - r.Discount,
+            Total = subtotal - discountAmount,
             IsActive = r.IsActive,
             Details = details,
         };

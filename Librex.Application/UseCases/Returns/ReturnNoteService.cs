@@ -24,7 +24,7 @@ public class ReturnNoteService : IReturnNoteService
 
     public async Task<ReturnNoteDto> CreateAsync(CreateReturnNoteDto dto)
     {
-        var folio = await _repository.GetNextFolioAsync(tenantId: 1);
+        var folio = await _repository.GetNextFolioAsync();
 
         var note = new ReturnNote
         {

@@ -8,6 +8,7 @@ using Librex.Application.UseCases.Remissions;
 using Librex.Application.UseCases.ReturnNotes;
 using Librex.Application.UseCases.Payments;
 using Librex.Application.UseCases.Reports;
+using Librex.Application.UseCases.Settings;
 using Librex.Domain.Interfaces;
 using Librex.Infrastructure.Data;
 using Librex.Infrastructure.Repositories;
@@ -32,6 +33,7 @@ builder.Services.AddScoped<IReturnNoteRepository, ReturnNoteRepository>();
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IReportRepository, ReportRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<ICompanySettingsRepository, CompanySettingsRepository>();
 
 // Services
 builder.Services.AddScoped<IProductService, ProductService>();
@@ -42,6 +44,7 @@ builder.Services.AddScoped<IReturnNoteService, ReturnNoteService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<ICompanySettingsService, CompanySettingsService>();
 
 // JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"]

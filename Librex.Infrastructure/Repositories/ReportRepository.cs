@@ -14,20 +14,36 @@ public class ReportRepository : IReportRepository
         _context = context;
     }
 
-    public async Task<PublisherReportDto> GetByPublisherAsync(int? publisherId, int tenantId)
+    public async Task<PublisherReportDto> GetByPublisherAsync(int? publisherId)
     {
         var salesQuery = _context.RemissionDetails
-            .Where(d => d.IsActive && d.Remission.IsActive && d.Remission.TenantId == tenantId);
+            .Where(d => d.IsActive && d.Remission.IsActive);
         if (publisherId.HasValue)
             salesQuery = salesQuery.Where(d => d.Product.PublisherId == publisherId.Value);
 
-        var sales = await salesQuery
-            .GroupBy(d => new { d.Remission.CustomerId, Name = d.Remission.Customer.Name })
-            .Select(g => new { g.Key.CustomerId, g.Key.Name, Total = g.Sum(d => d.Quantity * d.UnitPrice) })
+        var byRemission = await salesQuery
+            .GroupBy(d => new {
+                d.Remission.CustomerId,
+                CustomerName = d.Remission.Customer.Name,
+                d.RemissionId,
+                DiscountPct = d.Remission.Discount
+            })
+            .Select(g => new {
+                g.Key.CustomerId, g.Key.CustomerName,
+                Subtotal = g.Sum(d => d.Quantity * d.UnitPrice),
+                g.Key.DiscountPct
+            })
             .ToListAsync();
 
+        var sales = byRemission
+            .GroupBy(r => new { r.CustomerId, r.CustomerName })
+            .Select(g => new {
+                g.Key.CustomerId, Name = g.Key.CustomerName,
+                Total = g.Sum(r => r.Subtotal * (1 - r.DiscountPct / 100m))
+            }).ToList();
+
         var returnsQuery = _context.ReturnNoteDetails
-            .Where(d => d.IsActive && d.ReturnNote.IsActive && d.ReturnNote.TenantId == tenantId);
+            .Where(d => d.IsActive && d.ReturnNote.IsActive);
         if (publisherId.HasValue)
             returnsQuery = returnsQuery.Where(d => d.Product.PublisherId == publisherId.Value);
 
@@ -37,7 +53,7 @@ public class ReportRepository : IReportRepository
             .ToListAsync();
 
         var rawPayments = await _context.Payments
-            .Where(p => p.IsActive && p.TenantId == tenantId)
+            .Where(p => p.IsActive)
             .Select(p => new { p.RemissionId, p.CustomerId, CustomerName = p.Customer.Name, p.Amount })
             .ToListAsync();
 
@@ -125,10 +141,10 @@ public class ReportRepository : IReportRepository
         return new PublisherReportDto(publisherId, string.Empty, rows, totals);
     }
 
-    public async Task<SalesByProductReportDto> GetSalesByProductAsync(int? publisherId, int tenantId)
+    public async Task<SalesByProductReportDto> GetSalesByProductAsync(int? publisherId)
     {
         var salesQuery = _context.RemissionDetails
-            .Where(d => d.IsActive && d.Remission.IsActive && d.Remission.TenantId == tenantId);
+            .Where(d => d.IsActive && d.Remission.IsActive);
         if (publisherId.HasValue)
             salesQuery = salesQuery.Where(d => d.Product.PublisherId == publisherId.Value);
 
@@ -140,7 +156,7 @@ public class ReportRepository : IReportRepository
             .ToListAsync();
 
         var returnsQuery = _context.ReturnNoteDetails
-            .Where(d => d.IsActive && d.ReturnNote.IsActive && d.ReturnNote.TenantId == tenantId);
+            .Where(d => d.IsActive && d.ReturnNote.IsActive);
         if (publisherId.HasValue)
             returnsQuery = returnsQuery.Where(d => d.Product.PublisherId == publisherId.Value);
 

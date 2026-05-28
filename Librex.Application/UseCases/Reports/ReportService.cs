@@ -23,7 +23,7 @@ public class ReportService : IReportService
             publisherName = pub?.Name ?? "Editorial desconocida";
         }
 
-        return await _repository.GetByPublisherAsync(publisherId, tenantId: 1) with
+        return await _repository.GetByPublisherAsync(publisherId) with
         {
             PublisherName = publisherName,
         };
@@ -38,7 +38,7 @@ public class ReportService : IReportService
             publisherName = pub?.Name ?? "Editorial desconocida";
         }
 
-        return await _repository.GetSalesByProductAsync(publisherId, tenantId: 1) with
+        return await _repository.GetSalesByProductAsync(publisherId) with
         {
             PublisherName = publisherName,
         };

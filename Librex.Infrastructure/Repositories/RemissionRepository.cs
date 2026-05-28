@@ -39,10 +39,9 @@ public class RemissionRepository : IRemissionRepository
             .OrderByDescending(r => r.Date)
             .ToListAsync();
 
-    public async Task<int> GetNextFolioAsync(int tenantId)
+    public async Task<int> GetNextFolioAsync()
     {
         var max = await _context.Remissions
-            .Where(r => r.TenantId == tenantId)
             .Select(r => (int?)r.FolioNumber)
             .MaxAsync();
         return (max ?? 0) + 1;

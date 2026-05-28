@@ -15,7 +15,7 @@ public class PaymentConfiguration : IEntityTypeConfiguration<Payment>
         builder.Property(p => p.PaymentMethod).HasMaxLength(50).IsRequired();
         builder.Property(p => p.Reference).HasMaxLength(200);
 
-        builder.HasIndex(p => new { p.TenantId, p.FolioNumber }).IsUnique();
+        builder.HasIndex(p => p.FolioNumber).IsUnique();
 
         builder.HasOne(p => p.Customer)
                .WithMany()

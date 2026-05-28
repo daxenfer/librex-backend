@@ -8,12 +8,15 @@ public class CreatePublisherDto
     [MaxLength(200)]
     public string Name { get; set; } = string.Empty;
 
+    [Required]
     [MaxLength(200)]
-    public string? Contact { get; set; }
+    public string Contact { get; set; } = string.Empty;
 
+    [Required]
     [MaxLength(20)]
-    public string? Phone { get; set; }
+    public string Phone { get; set; } = string.Empty;
 
+    [Required]
     [MaxLength(150)]
-    public string? Email { get; set; }
+    public string Email { get; set; } = string.Empty;
 }

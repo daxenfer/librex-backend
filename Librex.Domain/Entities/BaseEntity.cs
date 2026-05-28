@@ -6,5 +6,4 @@ public abstract class BaseEntity
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ModifiedAt { get; set; }
     public bool IsActive { get; set; } = true;
-    public int TenantId { get; set; } = 1;
 }

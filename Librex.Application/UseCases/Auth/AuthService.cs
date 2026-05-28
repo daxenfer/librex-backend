@@ -46,7 +46,6 @@ public class AuthService : IAuthService
             new Claim(ClaimTypes.Name, user.Username),
             new Claim(ClaimTypes.Role, user.Role),
             new Claim("fullName", user.FullName),
-            new Claim("tenantId", user.TenantId.ToString()),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
         };
 

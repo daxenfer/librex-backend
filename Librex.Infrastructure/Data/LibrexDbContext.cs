@@ -16,6 +16,7 @@ public class LibrexDbContext : DbContext
     public DbSet<ReturnNote> ReturnNotes => Set<ReturnNote>();
     public DbSet<ReturnNoteDetail> ReturnNoteDetails => Set<ReturnNoteDetail>();
     public DbSet<Payment> Payments => Set<Payment>();
+    public DbSet<CompanySettings> CompanySettings => Set<CompanySettings>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

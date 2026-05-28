@@ -10,5 +10,9 @@ public class Remission : BaseEntity
     public string? Notes { get; set; }
     public string? RecipientName { get; set; }
     public decimal Discount { get; set; }
+    public DateTime DeliveryDate { get; set; }
+    public DateTime PaymentDueDate { get; set; }
+    public decimal ReturnPercentage { get; set; }
+    public DateTime ReturnDueDate { get; set; }
     public ICollection<RemissionDetail> Details { get; set; } = [];
 }

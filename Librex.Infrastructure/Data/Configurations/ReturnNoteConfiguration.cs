@@ -14,7 +14,7 @@ public class ReturnNoteConfiguration : IEntityTypeConfiguration<ReturnNote>
         builder.Property(r => r.ReceivedBy).HasMaxLength(200);
         builder.Property(r => r.Discount).HasColumnType("numeric(10,2)");
 
-        builder.HasIndex(r => new { r.TenantId, r.FolioNumber }).IsUnique();
+        builder.HasIndex(r => r.FolioNumber).IsUnique();
 
         builder.HasOne(r => r.Customer)
                .WithMany()

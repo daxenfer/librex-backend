@@ -3,6 +3,7 @@ using System;
 using Librex.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Librex.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(LibrexDbContext))]
-    partial class LibrexDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260528043037_InitialCreate")]
+    partial class InitialCreate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -87,11 +90,9 @@ namespace Librex.Infrastructure.Data.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Address")
-                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("City")
-                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
@@ -110,12 +111,10 @@ namespace Librex.Infrastructure.Data.Migrations
                         .HasColumnType("character varying(200)");
 
                     b.Property<string>("Phone")
-                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
                     b.Property<string>("PostalCode")
-                        .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
@@ -221,15 +220,12 @@ namespace Librex.Infrastructure.Data.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Contact")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Email")
-                        .IsRequired()
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)");
 
@@ -245,7 +241,6 @@ namespace Librex.Infrastructure.Data.Migrations
                         .HasColumnType("character varying(200)");
 
                     b.Property<string>("Phone")
-                        .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
@@ -271,7 +266,7 @@ namespace Librex.Infrastructure.Data.Migrations
                     b.Property<DateTime>("Date")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime>("DeliveryDate")
+                    b.Property<DateTime?>("DeliveryDate")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<decimal>("Discount")
@@ -289,17 +284,17 @@ namespace Librex.Infrastructure.Data.Migrations
                     b.Property<string>("Notes")
                         .HasColumnType("text");
 
-                    b.Property<DateTime>("PaymentDueDate")
+                    b.Property<DateTime?>("PaymentDueDate")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("RecipientName")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<DateTime>("ReturnDueDate")
+                    b.Property<DateTime?>("ReturnDueDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<decimal>("ReturnPercentage")
+                    b.Property<decimal?>("ReturnPercentage")
                         .HasColumnType("numeric(5,2)");
 
                     b.Property<string>("SalesPerson")
@@ -323,6 +318,10 @@ namespace Librex.Infrastructure.Data.Migrations
                         .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("City")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");

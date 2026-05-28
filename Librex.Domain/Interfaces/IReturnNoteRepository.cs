@@ -6,5 +6,5 @@ public interface IReturnNoteRepository : IRepository<ReturnNote>
 {
     Task<ReturnNote?> GetByIdWithDetailsAsync(int id);
     Task<IEnumerable<ReturnNote>> GetAllWithCustomerAsync();
-    Task<int> GetNextFolioAsync(int tenantId);
+    Task<int> GetNextFolioAsync();
 }

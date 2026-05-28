@@ -14,8 +14,9 @@ public class RemissionConfiguration : IEntityTypeConfiguration<Remission>
         builder.Property(r => r.SalesPerson).HasMaxLength(200);
         builder.Property(r => r.RecipientName).HasMaxLength(200);
         builder.Property(r => r.Discount).HasColumnType("numeric(10,2)");
+        builder.Property(r => r.ReturnPercentage).HasColumnType("numeric(5,2)");
 
-        builder.HasIndex(r => new { r.TenantId, r.FolioNumber }).IsUnique();
+        builder.HasIndex(r => r.FolioNumber).IsUnique();
 
         builder.HasOne(r => r.Customer)
                .WithMany()

@@ -24,7 +24,14 @@ public class CustomerService : ICustomerService
 
     public async Task<CustomerDto> CreateAsync(CreateCustomerDto dto)
     {
-        var customer = new Customer { Name = dto.Name };
+        var customer = new Customer
+        {
+            Name = dto.Name,
+            Address = dto.Address,
+            PostalCode = dto.PostalCode,
+            Phone = dto.Phone,
+            City = dto.City,
+        };
         return MapToDto(await _repository.AddAsync(customer));
     }
 
@@ -34,6 +41,10 @@ public class CustomerService : ICustomerService
         if (customer is null) return null;
 
         customer.Name = dto.Name;
+        customer.Address = dto.Address;
+        customer.PostalCode = dto.PostalCode;
+        customer.Phone = dto.Phone;
+        customer.City = dto.City;
         customer.IsActive = dto.IsActive;
 
         await _repository.UpdateAsync(customer);
@@ -52,6 +63,10 @@ public class CustomerService : ICustomerService
     {
         Id = c.Id,
         Name = c.Name,
+        Address = c.Address,
+        PostalCode = c.PostalCode,
+        Phone = c.Phone,
+        City = c.City,
         IsActive = c.IsActive,
     };
 }

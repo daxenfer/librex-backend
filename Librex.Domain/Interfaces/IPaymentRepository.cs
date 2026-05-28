@@ -6,5 +6,5 @@ public interface IPaymentRepository : IRepository<Payment>
 {
     Task<Payment?> GetByIdWithCustomerAsync(int id);
     Task<IEnumerable<Payment>> GetAllWithCustomerAsync();
-    Task<int> GetNextFolioAsync(int tenantId);
+    Task<int> GetNextFolioAsync();
 }

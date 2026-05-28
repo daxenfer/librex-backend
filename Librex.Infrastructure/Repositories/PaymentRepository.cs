@@ -37,10 +37,9 @@ public class PaymentRepository : IPaymentRepository
             .OrderByDescending(p => p.Date)
             .ToListAsync();
 
-    public async Task<int> GetNextFolioAsync(int tenantId)
+    public async Task<int> GetNextFolioAsync()
     {
         var max = await _context.Payments
-            .Where(p => p.TenantId == tenantId)
             .Select(p => (int?)p.FolioNumber)
             .MaxAsync();
         return (max ?? 0) + 1;
