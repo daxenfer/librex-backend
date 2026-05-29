@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "linkedAt": "2026-05-29T05:42:27Z",
+  "tenantId": "tenant-dbc36322-3582-4849-95ce-46c34e532d8c",
+  "serviceId": "svc-6def20d9-d685-4c75-9a56-1ee9ce7089dd",
+  "appId": "appId-043e4f45-1059-4e26-bc20-3da26ab30368",
+  "siteUrl": "https://api.librex.apps2.kubiy.site",
+  "deployType": "server",
+  "auth": {
+    "type": "appToken",
+    "tokenId": "tok_e9b55b4381db436d9754273ac91c353d",
+    "scopes": "deploy"
+  },
+  "apikey": "7TKh610ebqIWQjJbg29j6IuEfnhAp63kHxcUDh0G-TQ"
+}

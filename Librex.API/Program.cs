@@ -128,6 +128,12 @@ if (app.Environment.IsDevelopment())
         Process.Start(new ProcessStartInfo("http://localhost:5176/swagger") { UseShellExecute = true }));
 }
 
+if (app.Environment.IsProduction())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
 app.UseCors("ReactPolicy");
 app.UseAuthentication();
 app.UseAuthorization();
