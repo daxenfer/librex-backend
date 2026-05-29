@@ -4,9 +4,6 @@
 # dotenv files
 .env
 
-Librex.API/appsettings.Development.json
-Librex.API/appsettings.json
-
 
 # User-specific files
 *.rsuser
