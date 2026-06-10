@@ -20,5 +20,6 @@ public class CompanySettingsConfiguration : IEntityTypeConfiguration<CompanySett
         builder.Property(c => c.PostalCode).HasMaxLength(10);
         builder.Property(c => c.City).HasMaxLength(100);
         builder.Property(c => c.State).HasMaxLength(100);
+        builder.Property(c => c.LogoBase64).HasColumnType("text");
     }
 }

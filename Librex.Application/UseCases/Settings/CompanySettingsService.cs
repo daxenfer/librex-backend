@@ -33,6 +33,7 @@ public class CompanySettingsService : ICompanySettingsService
         settings.PostalCode = dto.PostalCode;
         settings.City = dto.City;
         settings.State = dto.State;
+        settings.LogoBase64 = dto.LogoBase64;
 
         await _repository.UpdateAsync(settings);
         return MapToDto(settings);
@@ -51,5 +52,6 @@ public class CompanySettingsService : ICompanySettingsService
         PostalCode = s.PostalCode,
         City = s.City,
         State = s.State,
+        LogoBase64 = s.LogoBase64,
     };
 }

@@ -36,4 +36,6 @@ public class UpdateCompanySettingsDto
 
     [MaxLength(100)]
     public string? State { get; set; }
+
+    public string? LogoBase64 { get; set; }
 }
