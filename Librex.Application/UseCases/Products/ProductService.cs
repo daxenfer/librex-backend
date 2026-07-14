@@ -24,7 +24,7 @@ public class ProductService : IProductService
 
     public async Task<ProductDto> CreateAsync(CreateProductDto dto)
     {
-        var product = new Product { Name = dto.Name, PublisherId = dto.PublisherId };
+        var product = new Product { Name = dto.Name, Isbn = dto.Isbn, SupplierId = dto.SupplierId };
         return MapToDto(await _repository.AddAsync(product));
     }
 
@@ -34,7 +34,8 @@ public class ProductService : IProductService
         if (product is null) return null;
 
         product.Name = dto.Name;
-        product.PublisherId = dto.PublisherId;
+        product.Isbn = dto.Isbn;
+        product.SupplierId = dto.SupplierId;
         product.IsActive = dto.IsActive;
 
         await _repository.UpdateAsync(product);
@@ -53,8 +54,9 @@ public class ProductService : IProductService
     {
         Id = p.Id,
         Name = p.Name,
-        PublisherId = p.PublisherId,
-        PublisherName = p.Publisher?.Name ?? string.Empty,
+        Isbn = p.Isbn,
+        SupplierId = p.SupplierId,
+        SupplierName = p.Supplier?.Name ?? string.Empty,
         IsActive = p.IsActive,
     };
 }

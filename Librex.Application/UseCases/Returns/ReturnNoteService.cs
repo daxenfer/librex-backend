@@ -92,7 +92,7 @@ public class ReturnNoteService : IReturnNoteService
             Id = d.Id,
             ProductId = d.ProductId,
             ProductName = d.Product?.Name ?? string.Empty,
-            PublisherName = d.Product?.Publisher?.Name,
+            SupplierName = d.Product?.Supplier?.Name,
             Quantity = d.Quantity,
             UnitPrice = d.UnitPrice,
             Amount = d.Quantity * d.UnitPrice,

@@ -27,6 +27,7 @@ public class CustomerService : ICustomerService
         var customer = new Customer
         {
             Name = dto.Name,
+            Contact = dto.Contact,
             Address = dto.Address,
             PostalCode = dto.PostalCode,
             Phone = dto.Phone,
@@ -41,6 +42,7 @@ public class CustomerService : ICustomerService
         if (customer is null) return null;
 
         customer.Name = dto.Name;
+        customer.Contact = dto.Contact;
         customer.Address = dto.Address;
         customer.PostalCode = dto.PostalCode;
         customer.Phone = dto.Phone;
@@ -63,6 +65,7 @@ public class CustomerService : ICustomerService
     {
         Id = c.Id,
         Name = c.Name,
+        Contact = c.Contact,
         Address = c.Address,
         PostalCode = c.PostalCode,
         Phone = c.Phone,

@@ -1,5 +1,5 @@
-using Librex.Application.DTOs.Publishers;
-using Librex.Application.UseCases.Publishers;
+using Librex.Application.DTOs.Suppliers;
+using Librex.Application.UseCases.Suppliers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,36 +7,36 @@ namespace Librex.API.Controllers;
 
 [Authorize]
 [ApiController]
-[Route("api/publishers")]
-public class PublishersController : ControllerBase
+[Route("api/suppliers")]
+public class SuppliersController : ControllerBase
 {
-    private readonly IPublisherService _service;
+    private readonly ISupplierService _service;
 
-    public PublishersController(IPublisherService service)
+    public SuppliersController(ISupplierService service)
     {
         _service = service;
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<PublisherDto>>> GetAll()
+    public async Task<ActionResult<IEnumerable<SupplierDto>>> GetAll()
         => Ok(await _service.GetAllAsync());
 
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<PublisherDto>> GetById(int id)
+    public async Task<ActionResult<SupplierDto>> GetById(int id)
     {
-        var publisher = await _service.GetByIdAsync(id);
-        return publisher is null ? NotFound() : Ok(publisher);
+        var supplier = await _service.GetByIdAsync(id);
+        return supplier is null ? NotFound() : Ok(supplier);
     }
 
     [HttpPost]
-    public async Task<ActionResult<PublisherDto>> Create([FromBody] CreatePublisherDto dto)
+    public async Task<ActionResult<SupplierDto>> Create([FromBody] CreateSupplierDto dto)
     {
         var created = await _service.CreateAsync(dto);
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
 
     [HttpPut("{id:int}")]
-    public async Task<ActionResult<PublisherDto>> Update(int id, [FromBody] UpdatePublisherDto dto)
+    public async Task<ActionResult<SupplierDto>> Update(int id, [FromBody] UpdateSupplierDto dto)
     {
         var updated = await _service.UpdateAsync(id, dto);
         return updated is null ? NotFound() : Ok(updated);

@@ -4,6 +4,6 @@ namespace Librex.Application.UseCases.Reports;
 
 public interface IReportService
 {
-    Task<PublisherReportDto> GetByPublisherAsync(int? publisherId);
-    Task<SalesByProductReportDto> GetSalesByProductAsync(int? publisherId);
+    Task<SupplierReportDto> GetBySupplierAsync(int? supplierId);
+    Task<SalesByProductReportDto> GetSalesByProductAsync(int? supplierId);
 }

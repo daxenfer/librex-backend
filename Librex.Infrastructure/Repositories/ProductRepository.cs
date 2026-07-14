@@ -16,12 +16,12 @@ public class ProductRepository : IProductRepository
 
     public async Task<Product?> GetByIdAsync(int id)
         => await _context.Products
-            .Include(p => p.Publisher)
+            .Include(p => p.Supplier)
             .FirstOrDefaultAsync(p => p.Id == id);
 
     public async Task<IEnumerable<Product>> GetAllAsync()
         => await _context.Products
-            .Include(p => p.Publisher)
+            .Include(p => p.Supplier)
             .Where(p => p.IsActive)
             .OrderBy(p => p.Name)
             .ToListAsync();

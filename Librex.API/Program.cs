@@ -3,12 +3,13 @@ using System.Text;
 using Librex.Application.UseCases.Auth;
 using Librex.Application.UseCases.Customers;
 using Librex.Application.UseCases.Products;
-using Librex.Application.UseCases.Publishers;
+using Librex.Application.UseCases.Suppliers;
 using Librex.Application.UseCases.Remissions;
 using Librex.Application.UseCases.ReturnNotes;
 using Librex.Application.UseCases.Payments;
 using Librex.Application.UseCases.Reports;
 using Librex.Application.UseCases.Settings;
+using Librex.API.Middleware;
 using Librex.Domain.Interfaces;
 using Librex.Infrastructure.Data;
 using Librex.Infrastructure.Repositories;
@@ -27,7 +28,7 @@ builder.Services.AddDbContext<LibrexDbContext>(options =>
 // Repositories
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
-builder.Services.AddScoped<IPublisherRepository, PublisherRepository>();
+builder.Services.AddScoped<ISupplierRepository, SupplierRepository>();
 builder.Services.AddScoped<IRemissionRepository, RemissionRepository>();
 builder.Services.AddScoped<IReturnNoteRepository, ReturnNoteRepository>();
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
@@ -38,7 +39,7 @@ builder.Services.AddScoped<ICompanySettingsRepository, CompanySettingsRepository
 // Services
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<ICustomerService, CustomerService>();
-builder.Services.AddScoped<IPublisherService, PublisherService>();
+builder.Services.AddScoped<ISupplierService, SupplierService>();
 builder.Services.AddScoped<IRemissionService, RemissionService>();
 builder.Services.AddScoped<IReturnNoteService, ReturnNoteService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
@@ -133,6 +134,8 @@ if (app.Environment.IsProduction())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+app.UseMiddleware<ErrorLoggingMiddleware>();
 
 app.UseCors("ReactPolicy");
 app.UseAuthentication();

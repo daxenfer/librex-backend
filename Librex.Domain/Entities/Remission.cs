@@ -9,6 +9,7 @@ public class Remission : BaseEntity
     public string? SalesPerson { get; set; }
     public string? Notes { get; set; }
     public string? RecipientName { get; set; }
+    public string? PurchaseOrder { get; set; }
     public decimal Discount { get; set; }
     public DateTime DeliveryDate { get; set; }
     public DateTime PaymentDueDate { get; set; }

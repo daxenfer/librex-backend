@@ -14,59 +14,79 @@ public class ReportRepository : IReportRepository
         _context = context;
     }
 
-    public async Task<PublisherReportDto> GetByPublisherAsync(int? publisherId)
+    public async Task<SupplierReportDto> GetBySupplierAsync(int? supplierId)
     {
         var salesQuery = _context.RemissionDetails
             .Where(d => d.IsActive && d.Remission.IsActive);
-        if (publisherId.HasValue)
-            salesQuery = salesQuery.Where(d => d.Product.PublisherId == publisherId.Value);
+        if (supplierId.HasValue)
+            salesQuery = salesQuery.Where(d => d.Product.SupplierId == supplierId.Value);
 
         var byRemission = await salesQuery
             .GroupBy(d => new {
                 d.Remission.CustomerId,
                 CustomerName = d.Remission.Customer.Name,
                 d.RemissionId,
-                DiscountPct = d.Remission.Discount
+                Discount = d.Remission.Discount
             })
             .Select(g => new {
-                g.Key.CustomerId, g.Key.CustomerName,
+                g.Key.CustomerId, g.Key.CustomerName, g.Key.RemissionId,
                 Subtotal = g.Sum(d => d.Quantity * d.UnitPrice),
-                g.Key.DiscountPct
+                g.Key.Discount
             })
             .ToListAsync();
+
+        // Subtotal completo por remisión (sin filtrar por proveedor) para prorratear
+        // el descuento, que ahora es un monto fijo de la remisión.
+        var fullSubtotals = await _context.RemissionDetails
+            .Where(d => d.IsActive && d.Remission.IsActive)
+            .GroupBy(d => d.RemissionId)
+            .Select(g => new { RemissionId = g.Key, Subtotal = g.Sum(d => d.Quantity * d.UnitPrice) })
+            .ToDictionaryAsync(x => x.RemissionId, x => x.Subtotal);
 
         var sales = byRemission
             .GroupBy(r => new { r.CustomerId, r.CustomerName })
             .Select(g => new {
                 g.Key.CustomerId, Name = g.Key.CustomerName,
-                Total = g.Sum(r => r.Subtotal * (1 - r.DiscountPct / 100m))
+                Total = g.Sum(r =>
+                {
+                    var fullSubtotal = fullSubtotals.GetValueOrDefault(r.RemissionId);
+                    // Reparte el descuento (monto fijo) según la participación del proveedor en la remisión.
+                    var appliedDiscount = fullSubtotal == 0 ? 0m : r.Discount * (r.Subtotal / fullSubtotal);
+                    return r.Subtotal - appliedDiscount;
+                })
             }).ToList();
 
         var returnsQuery = _context.ReturnNoteDetails
             .Where(d => d.IsActive && d.ReturnNote.IsActive);
-        if (publisherId.HasValue)
-            returnsQuery = returnsQuery.Where(d => d.Product.PublisherId == publisherId.Value);
+        if (supplierId.HasValue)
+            returnsQuery = returnsQuery.Where(d => d.Product.SupplierId == supplierId.Value);
 
         var returns = await returnsQuery
             .GroupBy(d => new { d.ReturnNote.CustomerId, Name = d.ReturnNote.Customer.Name })
             .Select(g => new { g.Key.CustomerId, g.Key.Name, Total = g.Sum(d => d.Quantity * d.UnitPrice) })
             .ToListAsync();
 
-        var rawPayments = await _context.Payments
-            .Where(p => p.IsActive)
-            .Select(p => new { p.RemissionId, p.CustomerId, CustomerName = p.Customer.Name, p.Amount })
-            .ToListAsync();
-
         Dictionary<int, (string Name, decimal Total)> paymentsDict;
 
-        if (publisherId.HasValue)
+        if (supplierId.HasValue)
         {
+            // Las asignaciones de pago llevan el monto aplicado a cada remisión.
+            var allocations = await _context.PaymentAllocations
+                .Where(a => a.IsActive && a.Payment.IsActive)
+                .Select(a => new {
+                    a.RemissionId,
+                    a.Amount,
+                    a.Payment.CustomerId,
+                    CustomerName = a.Payment.Customer.Name
+                })
+                .ToListAsync();
+
             var remissionShares = await _context.RemissionDetails
                 .Where(d => d.IsActive && d.Remission.IsActive)
-                .GroupBy(d => new { d.RemissionId, d.Product.PublisherId })
+                .GroupBy(d => new { d.RemissionId, d.Product.SupplierId })
                 .Select(g => new {
                     g.Key.RemissionId,
-                    g.Key.PublisherId,
+                    g.Key.SupplierId,
                     Amount = g.Sum(d => d.Quantity * d.UnitPrice)
                 })
                 .ToListAsync();
@@ -75,28 +95,36 @@ public class ReportRepository : IReportRepository
                 .GroupBy(x => x.RemissionId)
                 .ToDictionary(g => g.Key, g => g.Sum(x => x.Amount));
 
-            var publisherAmountByRemission = remissionShares
-                .Where(x => x.PublisherId == publisherId.Value)
+            var supplierAmountByRemission = remissionShares
+                .Where(x => x.SupplierId == supplierId.Value)
                 .ToDictionary(x => x.RemissionId, x => x.Amount);
 
-            paymentsDict = rawPayments
-                .GroupBy(p => new { p.CustomerId, p.CustomerName })
+            // Prorratea cada asignación por la participación del proveedor en la remisión.
+            // Los anticipos (no asignados) no se atribuyen a ningún proveedor.
+            paymentsDict = allocations
+                .GroupBy(a => new { a.CustomerId, a.CustomerName })
                 .ToDictionary(
                     g => g.Key.CustomerId,
                     g => (
                         Name: g.Key.CustomerName,
-                        Total: g.Sum(p =>
+                        Total: g.Sum(a =>
                         {
-                            var remTotal = remissionTotals.GetValueOrDefault(p.RemissionId);
+                            var remTotal = remissionTotals.GetValueOrDefault(a.RemissionId);
                             if (remTotal == 0) return 0m;
-                            var pubAmt = publisherAmountByRemission.GetValueOrDefault(p.RemissionId);
-                            return p.Amount * (pubAmt / remTotal);
+                            var supAmt = supplierAmountByRemission.GetValueOrDefault(a.RemissionId);
+                            return a.Amount * (supAmt / remTotal);
                         })
                     )
                 );
         }
         else
         {
+            // A nivel cliente, todo el dinero recibido (incluye anticipos) reduce el saldo.
+            var rawPayments = await _context.Payments
+                .Where(p => p.IsActive)
+                .Select(p => new { p.CustomerId, CustomerName = p.Customer.Name, p.Amount })
+                .ToListAsync();
+
             paymentsDict = rawPayments
                 .GroupBy(p => new { p.CustomerId, p.CustomerName })
                 .ToDictionary(
@@ -138,15 +166,15 @@ public class ReportRepository : IReportRepository
             rows.Sum(r => r.Balance)
         );
 
-        return new PublisherReportDto(publisherId, string.Empty, rows, totals);
+        return new SupplierReportDto(supplierId, string.Empty, rows, totals);
     }
 
-    public async Task<SalesByProductReportDto> GetSalesByProductAsync(int? publisherId)
+    public async Task<SalesByProductReportDto> GetSalesByProductAsync(int? supplierId)
     {
         var salesQuery = _context.RemissionDetails
             .Where(d => d.IsActive && d.Remission.IsActive);
-        if (publisherId.HasValue)
-            salesQuery = salesQuery.Where(d => d.Product.PublisherId == publisherId.Value);
+        if (supplierId.HasValue)
+            salesQuery = salesQuery.Where(d => d.Product.SupplierId == supplierId.Value);
 
         var sales = await salesQuery
             .GroupBy(d => new { d.Remission.CustomerId, CustomerName = d.Remission.Customer.Name,
@@ -157,8 +185,8 @@ public class ReportRepository : IReportRepository
 
         var returnsQuery = _context.ReturnNoteDetails
             .Where(d => d.IsActive && d.ReturnNote.IsActive);
-        if (publisherId.HasValue)
-            returnsQuery = returnsQuery.Where(d => d.Product.PublisherId == publisherId.Value);
+        if (supplierId.HasValue)
+            returnsQuery = returnsQuery.Where(d => d.Product.SupplierId == supplierId.Value);
 
         var returns = await returnsQuery
             .GroupBy(d => new { d.ReturnNote.CustomerId, CustomerName = d.ReturnNote.Customer.Name,
@@ -212,6 +240,6 @@ public class ReportRepository : IReportRepository
         var productTotals = products.Select(p => rows.Sum(r => r.Quantities[products.IndexOf(p)])).ToList();
         var grandTotal = productTotals.Sum();
 
-        return new SalesByProductReportDto(publisherId, string.Empty, products, rows, productTotals, grandTotal);
+        return new SalesByProductReportDto(supplierId, string.Empty, products, rows, productTotals, grandTotal);
     }
 }

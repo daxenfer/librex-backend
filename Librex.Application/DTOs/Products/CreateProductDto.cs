@@ -8,6 +8,9 @@ public class CreateProductDto
     [MaxLength(200)]
     public string Name { get; set; } = string.Empty;
 
+    [MaxLength(50)]
+    public string? Isbn { get; set; }
+
     [Required]
-    public int PublisherId { get; set; }
+    public int SupplierId { get; set; }
 }

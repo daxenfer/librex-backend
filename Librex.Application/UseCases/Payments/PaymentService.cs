@@ -30,12 +30,16 @@ public class PaymentService : IPaymentService
         {
             FolioNumber = folio,
             CustomerId = dto.CustomerId,
-            RemissionId = dto.RemissionId,
             Date = dto.Date,
             Amount = dto.Amount,
             PaymentMethod = dto.PaymentMethod,
             Reference = dto.Reference,
             Notes = dto.Notes,
+            ReceivedFrom = dto.ReceivedFrom,
+            Concept = dto.Concept,
+            CollectedBy = dto.CollectedBy,
+            City = dto.City,
+            Allocations = BuildAllocations(dto.Allocations),
         };
 
         var created = await _repository.AddAsync(payment);
@@ -49,13 +53,20 @@ public class PaymentService : IPaymentService
         if (payment is null) return null;
 
         payment.CustomerId = dto.CustomerId;
-        payment.RemissionId = dto.RemissionId;
         payment.Date = dto.Date;
         payment.Amount = dto.Amount;
         payment.PaymentMethod = dto.PaymentMethod;
         payment.Reference = dto.Reference;
         payment.Notes = dto.Notes;
+        payment.ReceivedFrom = dto.ReceivedFrom;
+        payment.Concept = dto.Concept;
+        payment.CollectedBy = dto.CollectedBy;
+        payment.City = dto.City;
         payment.IsActive = dto.IsActive;
+
+        payment.Allocations.Clear();
+        foreach (var a in BuildAllocations(dto.Allocations))
+            payment.Allocations.Add(a);
 
         await _repository.UpdateAsync(payment);
         var full = await _repository.GetByIdWithCustomerAsync(id);
@@ -70,20 +81,49 @@ public class PaymentService : IPaymentService
         return true;
     }
 
-    private static PaymentDto MapToDto(Payment p) => new()
+    // Solo asignaciones con monto positivo; la suma no debe exceder el monto recibido
+    // (el remanente queda como anticipo a favor del cliente).
+    private static List<PaymentAllocation> BuildAllocations(IEnumerable<CreatePaymentAllocationDto> allocations)
+        => allocations
+            .Where(a => a.Amount > 0)
+            .Select(a => new PaymentAllocation
+            {
+                RemissionId = a.RemissionId,
+                Amount = a.Amount,
+            })
+            .ToList();
+
+    private static PaymentDto MapToDto(Payment p)
     {
-        Id = p.Id,
-        FolioNumber = p.FolioNumber,
-        FolioFormatted = p.FolioNumber.ToString("D6"),
-        CustomerId = p.CustomerId,
-        CustomerName = p.Customer?.Name ?? string.Empty,
-        RemissionId = p.RemissionId,
-        RemissionFolioFormatted = p.Remission.FolioNumber.ToString("D6"),
-        Date = p.Date,
-        Amount = p.Amount,
-        PaymentMethod = p.PaymentMethod,
-        Reference = p.Reference,
-        Notes = p.Notes,
-        IsActive = p.IsActive,
-    };
+        var allocations = p.Allocations.Select(a => new PaymentAllocationDto
+        {
+            RemissionId = a.RemissionId,
+            RemissionFolioFormatted = a.Remission?.FolioNumber.ToString("D6") ?? string.Empty,
+            Amount = a.Amount,
+        }).ToList();
+
+        var applied = allocations.Sum(a => a.Amount);
+
+        return new PaymentDto
+        {
+            Id = p.Id,
+            FolioNumber = p.FolioNumber,
+            FolioFormatted = p.FolioNumber.ToString("D6"),
+            CustomerId = p.CustomerId,
+            CustomerName = p.Customer?.Name ?? string.Empty,
+            Date = p.Date,
+            Amount = p.Amount,
+            AppliedAmount = applied,
+            UnappliedAmount = p.Amount - applied,
+            PaymentMethod = p.PaymentMethod,
+            Reference = p.Reference,
+            Notes = p.Notes,
+            ReceivedFrom = p.ReceivedFrom,
+            Concept = p.Concept,
+            CollectedBy = p.CollectedBy,
+            City = p.City,
+            IsActive = p.IsActive,
+            Allocations = allocations,
+        };
+    }
 }

@@ -20,7 +20,7 @@ public class PaymentRepository : IPaymentRepository
     public async Task<Payment?> GetByIdWithCustomerAsync(int id)
         => await _context.Payments
             .Include(p => p.Customer)
-            .Include(p => p.Remission)
+            .Include(p => p.Allocations).ThenInclude(a => a.Remission)
             .FirstOrDefaultAsync(p => p.Id == id);
 
     public async Task<IEnumerable<Payment>> GetAllAsync()
@@ -32,7 +32,7 @@ public class PaymentRepository : IPaymentRepository
     public async Task<IEnumerable<Payment>> GetAllWithCustomerAsync()
         => await _context.Payments
             .Include(p => p.Customer)
-            .Include(p => p.Remission)
+            .Include(p => p.Allocations).ThenInclude(a => a.Remission)
             .Where(p => p.IsActive)
             .OrderByDescending(p => p.Date)
             .ToListAsync();

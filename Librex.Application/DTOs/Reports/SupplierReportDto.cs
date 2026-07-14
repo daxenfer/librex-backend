@@ -1,8 +1,8 @@
 namespace Librex.Application.DTOs.Reports;
 
-public record PublisherReportDto(
-    int? PublisherId,
-    string PublisherName,
+public record SupplierReportDto(
+    int? SupplierId,
+    string SupplierName,
     IEnumerable<CustomerReportRowDto> Customers,
     CustomerReportRowDto Totals
 );

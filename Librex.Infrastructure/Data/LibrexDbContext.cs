@@ -9,14 +9,16 @@ public class LibrexDbContext : DbContext
 
     public DbSet<Product> Products => Set<Product>();
     public DbSet<Customer> Customers => Set<Customer>();
-    public DbSet<Publisher> Publishers => Set<Publisher>();
+    public DbSet<Supplier> Suppliers => Set<Supplier>();
     public DbSet<User> Users => Set<User>();
     public DbSet<Remission> Remissions => Set<Remission>();
     public DbSet<RemissionDetail> RemissionDetails => Set<RemissionDetail>();
     public DbSet<ReturnNote> ReturnNotes => Set<ReturnNote>();
     public DbSet<ReturnNoteDetail> ReturnNoteDetails => Set<ReturnNoteDetail>();
     public DbSet<Payment> Payments => Set<Payment>();
+    public DbSet<PaymentAllocation> PaymentAllocations => Set<PaymentAllocation>();
     public DbSet<CompanySettings> CompanySettings => Set<CompanySettings>();
+    public DbSet<ErrorLog> ErrorLogs => Set<ErrorLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

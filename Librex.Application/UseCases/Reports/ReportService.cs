@@ -6,41 +6,41 @@ namespace Librex.Application.UseCases.Reports;
 public class ReportService : IReportService
 {
     private readonly IReportRepository _repository;
-    private readonly IPublisherRepository _publishers;
+    private readonly ISupplierRepository _suppliers;
 
-    public ReportService(IReportRepository repository, IPublisherRepository publishers)
+    public ReportService(IReportRepository repository, ISupplierRepository suppliers)
     {
         _repository = repository;
-        _publishers = publishers;
+        _suppliers = suppliers;
     }
 
-    public async Task<PublisherReportDto> GetByPublisherAsync(int? publisherId)
+    public async Task<SupplierReportDto> GetBySupplierAsync(int? supplierId)
     {
-        string publisherName = "Todas las editoriales";
-        if (publisherId.HasValue)
+        string supplierName = "Todos los proveedores";
+        if (supplierId.HasValue)
         {
-            var pub = await _publishers.GetByIdAsync(publisherId.Value);
-            publisherName = pub?.Name ?? "Editorial desconocida";
+            var pub = await _suppliers.GetByIdAsync(supplierId.Value);
+            supplierName = pub?.Name ?? "Proveedor desconocido";
         }
 
-        return await _repository.GetByPublisherAsync(publisherId) with
+        return await _repository.GetBySupplierAsync(supplierId) with
         {
-            PublisherName = publisherName,
+            SupplierName = supplierName,
         };
     }
 
-    public async Task<SalesByProductReportDto> GetSalesByProductAsync(int? publisherId)
+    public async Task<SalesByProductReportDto> GetSalesByProductAsync(int? supplierId)
     {
-        string publisherName = "Todas las editoriales";
-        if (publisherId.HasValue)
+        string supplierName = "Todos los proveedores";
+        if (supplierId.HasValue)
         {
-            var pub = await _publishers.GetByIdAsync(publisherId.Value);
-            publisherName = pub?.Name ?? "Editorial desconocida";
+            var pub = await _suppliers.GetByIdAsync(supplierId.Value);
+            supplierName = pub?.Name ?? "Proveedor desconocido";
         }
 
-        return await _repository.GetSalesByProductAsync(publisherId) with
+        return await _repository.GetSalesByProductAsync(supplierId) with
         {
-            PublisherName = publisherName,
+            SupplierName = supplierName,
         };
     }
 }

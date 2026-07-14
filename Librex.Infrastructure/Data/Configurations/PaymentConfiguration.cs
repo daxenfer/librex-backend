@@ -14,17 +14,16 @@ public class PaymentConfiguration : IEntityTypeConfiguration<Payment>
         builder.Property(p => p.Amount).HasColumnType("numeric(10,2)");
         builder.Property(p => p.PaymentMethod).HasMaxLength(50).IsRequired();
         builder.Property(p => p.Reference).HasMaxLength(200);
+        builder.Property(p => p.ReceivedFrom).HasMaxLength(200);
+        builder.Property(p => p.Concept).HasMaxLength(500);
+        builder.Property(p => p.CollectedBy).HasMaxLength(200);
+        builder.Property(p => p.City).HasMaxLength(100);
 
         builder.HasIndex(p => p.FolioNumber).IsUnique();
 
         builder.HasOne(p => p.Customer)
                .WithMany()
                .HasForeignKey(p => p.CustomerId)
-               .OnDelete(DeleteBehavior.Restrict);
-
-        builder.HasOne(p => p.Remission)
-               .WithMany()
-               .HasForeignKey(p => p.RemissionId)
                .OnDelete(DeleteBehavior.Restrict);
     }
 }

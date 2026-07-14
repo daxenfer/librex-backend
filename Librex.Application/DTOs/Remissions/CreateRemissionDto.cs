@@ -32,6 +32,9 @@ public class CreateRemissionDto
     [MaxLength(200)]
     public string? RecipientName { get; set; }
 
+    [MaxLength(200)]
+    public string? PurchaseOrder { get; set; }
+
     [Required]
     public DateTime DeliveryDate { get; set; }
 
@@ -45,8 +48,8 @@ public class CreateRemissionDto
     [Required]
     public DateTime ReturnDueDate { get; set; }
 
-    [Range(0, 100)]
-    public decimal DiscountPercentage { get; set; }
+    [Range(0, double.MaxValue)]
+    public decimal DiscountAmount { get; set; }
 
     [Required]
     [MinLength(1, ErrorMessage = "La remisión debe tener al menos un producto.")]

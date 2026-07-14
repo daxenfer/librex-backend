@@ -22,7 +22,7 @@ public class RemissionRepository : IRemissionRepository
             .Include(r => r.Customer)
             .Include(r => r.Details)
                 .ThenInclude(d => d.Product)
-                    .ThenInclude(p => p.Publisher)
+                    .ThenInclude(p => p.Supplier)
             .FirstOrDefaultAsync(r => r.Id == id);
 
     public async Task<IEnumerable<Remission>> GetAllAsync()

@@ -17,11 +17,11 @@ public class ReportsController : ControllerBase
         _service = service;
     }
 
-    [HttpGet("by-publisher")]
-    public async Task<ActionResult<PublisherReportDto>> ByPublisher([FromQuery] int? publisherId)
-        => Ok(await _service.GetByPublisherAsync(publisherId));
+    [HttpGet("by-supplier")]
+    public async Task<ActionResult<SupplierReportDto>> BySupplier([FromQuery] int? supplierId)
+        => Ok(await _service.GetBySupplierAsync(supplierId));
 
     [HttpGet("sales-by-product")]
-    public async Task<ActionResult<SalesByProductReportDto>> SalesByProduct([FromQuery] int? publisherId)
-        => Ok(await _service.GetSalesByProductAsync(publisherId));
+    public async Task<ActionResult<SalesByProductReportDto>> SalesByProduct([FromQuery] int? supplierId)
+        => Ok(await _service.GetSalesByProductAsync(supplierId));
 }

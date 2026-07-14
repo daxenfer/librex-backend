@@ -4,11 +4,11 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Librex.Infrastructure.Data.Configurations;
 
-public class PublisherConfiguration : IEntityTypeConfiguration<Publisher>
+public class SupplierConfiguration : IEntityTypeConfiguration<Supplier>
 {
-    public void Configure(EntityTypeBuilder<Publisher> builder)
+    public void Configure(EntityTypeBuilder<Supplier> builder)
     {
-        builder.ToTable("publishers");
+        builder.ToTable("suppliers");
 
         builder.HasKey(p => p.Id);
         builder.Property(p => p.Name).IsRequired().HasMaxLength(200);

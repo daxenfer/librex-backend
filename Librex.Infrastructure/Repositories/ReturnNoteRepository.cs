@@ -23,7 +23,7 @@ public class ReturnNoteRepository : IReturnNoteRepository
             .Include(r => r.Remission)
             .Include(r => r.Details)
                 .ThenInclude(d => d.Product)
-                    .ThenInclude(p => p.Publisher)
+                    .ThenInclude(p => p.Supplier)
             .FirstOrDefaultAsync(r => r.Id == id);
 
     public async Task<IEnumerable<ReturnNote>> GetAllAsync()

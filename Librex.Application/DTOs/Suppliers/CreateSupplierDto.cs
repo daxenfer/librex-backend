@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Librex.Application.DTOs.Publishers;
+namespace Librex.Application.DTOs.Suppliers;
 
-public class CreatePublisherDto
+public class CreateSupplierDto
 {
     [Required]
     [MaxLength(200)]

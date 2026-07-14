@@ -2,6 +2,6 @@ using Librex.Domain.Entities;
 
 namespace Librex.Domain.Interfaces;
 
-public interface IPublisherRepository : IRepository<Publisher>
+public interface ISupplierRepository : IRepository<Supplier>
 {
 }
