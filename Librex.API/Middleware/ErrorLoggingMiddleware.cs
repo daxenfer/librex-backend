@@ -75,7 +75,7 @@ public class ErrorLoggingMiddleware
                         TryWriteToLogger(record);
             }
 
-            await TryWriteResponseAsync(context, record);
+            await TryWriteResponseAsync(context, record, ex);
         }
     }
 
@@ -304,18 +304,27 @@ public class ErrorLoggingMiddleware
 
     // ---- Respuesta al cliente ----
 
-    private async Task TryWriteResponseAsync(HttpContext context, ErrorLog record)
+    private async Task TryWriteResponseAsync(HttpContext context, ErrorLog record, Exception exception)
     {
         try
         {
             if (context.Response.HasStarted) return;
 
-            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            // Una violación de FK no es una falla del servidor: es que el registro sigue
+            // referenciado. Merece un 409 con mensaje propio, no un 500 opaco.
+            var isConflict = DatabaseErrors.IsForeignKeyViolation(exception);
+            var message = isConflict
+                ? "No se puede completar la operación porque hay registros relacionados que dependen de este."
+                : "Ocurrió un error interno.";
+
+            context.Response.StatusCode = isConflict
+                ? StatusCodes.Status409Conflict
+                : StatusCodes.Status500InternalServerError;
             context.Response.ContentType = "application/json";
 
             var payload = _env.IsDevelopment()
-                ? JsonSerializer.Serialize(new { error = "Ocurrió un error interno.", requestId = record.RequestId, detail = record.Message })
-                : JsonSerializer.Serialize(new { error = "Ocurrió un error interno.", requestId = record.RequestId });
+                ? JsonSerializer.Serialize(new { error = message, requestId = record.RequestId, detail = record.Message })
+                : JsonSerializer.Serialize(new { error = message, requestId = record.RequestId });
 
             await context.Response.WriteAsync(payload);
         }

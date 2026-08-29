@@ -1,5 +1,8 @@
 using Librex.Application.DTOs.Suppliers;
 using Librex.Application.UseCases.Suppliers;
+using Librex.Application.DTOs.Deletion;
+using Librex.Application.UseCases.Deletion;
+using Librex.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,10 +14,12 @@ namespace Librex.API.Controllers;
 public class SuppliersController : ControllerBase
 {
     private readonly ISupplierService _service;
+    private readonly IDeletionService _deletionService;
 
-    public SuppliersController(ISupplierService service)
+    public SuppliersController(ISupplierService service, IDeletionService deletionService)
     {
         _service = service;
+        _deletionService = deletionService;
     }
 
     [HttpGet]
@@ -40,6 +45,15 @@ public class SuppliersController : ControllerBase
     {
         var updated = await _service.UpdateAsync(id, dto);
         return updated is null ? NotFound() : Ok(updated);
+    }
+
+    // Qué se va a borrar en cascada junto con esta entidad. Se consulta antes del DELETE
+    // para que el usuario confirme con el impacto a la vista.
+    [HttpGet("{id:int}/deletion-impact")]
+    public async Task<ActionResult<DeletionImpactDto>> GetDeletionImpact(int id)
+    {
+        var impact = await _deletionService.GetImpactAsync(DeletableEntity.Supplier, id);
+        return impact is null ? NotFound() : Ok(impact);
     }
 
     [HttpDelete("{id:int}")]

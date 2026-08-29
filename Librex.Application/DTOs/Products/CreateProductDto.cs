@@ -11,6 +11,12 @@ public class CreateProductDto
     [MaxLength(50)]
     public string? Isbn { get; set; }
 
+    [MaxLength(20)]
+    public string? SchoolLevel { get; set; }
+
+    [MaxLength(20)]
+    public string UnitType { get; set; } = "Unidad";
+
     [Required]
     public int SupplierId { get; set; }
 }

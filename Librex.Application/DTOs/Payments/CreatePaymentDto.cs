@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Librex.Application.DTOs.Payments;
 
-public class CreatePaymentDto
+public class CreatePaymentDto : IValidatableObject
 {
     [Required]
     public int CustomerId { get; set; }
@@ -38,4 +38,16 @@ public class CreatePaymentDto
     // Puede ir vacía: el pago se captura a nivel cliente (recibo) y se asigna a remisiones
     // después, en Cuentas por Cobrar. El remanente queda como anticipo a favor del cliente.
     public List<CreatePaymentAllocationDto> Allocations { get; set; } = [];
+
+    // Lo distribuido en remisiones no puede exceder el monto recibido; el remanente queda como
+    // anticipo. Es una regla de campos cruzados, así que va aquí y no en un [Range] individual.
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        const decimal epsilon = 0.01m;
+        var assigned = Allocations?.Sum(a => a.Amount) ?? 0m;
+        if (assigned > Amount + epsilon)
+            yield return new ValidationResult(
+                "Lo aplicado a remisiones no puede superar el monto del pago.",
+                [nameof(Allocations)]);
+    }
 }

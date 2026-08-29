@@ -24,6 +24,7 @@ public class ReturnNoteConfiguration : IEntityTypeConfiguration<ReturnNote>
         builder.HasOne(r => r.Remission)
                .WithMany()
                .HasForeignKey(r => r.RemissionId)
+               .IsRequired(false)
                .OnDelete(DeleteBehavior.Restrict);
     }
 }

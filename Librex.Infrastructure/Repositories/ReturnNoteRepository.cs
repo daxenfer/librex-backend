@@ -1,4 +1,5 @@
 using Librex.Domain.Entities;
+using Librex.Domain.Enums;
 using Librex.Domain.Interfaces;
 using Librex.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -63,13 +64,16 @@ public class ReturnNoteRepository : IReturnNoteRepository
         await _context.SaveChangesAsync();
     }
 
+    // Borrado físico en cascada. Un solo SaveChangesAsync para que EF lo resuelva
+    // dentro de una transacción: o se va todo, o no se va nada.
     public async Task DeleteAsync(int id)
     {
         var returnNote = await _context.ReturnNotes.FindAsync(id);
-        if (returnNote is not null)
-        {
-            returnNote.IsActive = false;
-            await _context.SaveChangesAsync();
-        }
+        if (returnNote is null) return;
+
+        var dependents = await DeletionGraph.ResolveAsync(_context, DeletableEntity.ReturnNote, id);
+        dependents.RemoveFrom(_context);
+        _context.ReturnNotes.Remove(returnNote);
+        await _context.SaveChangesAsync();
     }
 }

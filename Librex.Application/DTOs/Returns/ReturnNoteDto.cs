@@ -7,7 +7,7 @@ public class ReturnNoteDto
     public string FolioFormatted { get; set; } = string.Empty;
     public int CustomerId { get; set; }
     public string CustomerName { get; set; } = string.Empty;
-    public int RemissionId { get; set; }
+    public int? RemissionId { get; set; }
     public string RemissionFolioFormatted { get; set; } = string.Empty;
     public DateTime Date { get; set; }
     public string? Notes { get; set; }

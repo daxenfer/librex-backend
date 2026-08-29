@@ -108,7 +108,7 @@ public class ReturnNoteService : IReturnNoteService
             CustomerId = r.CustomerId,
             CustomerName = r.Customer?.Name ?? string.Empty,
             RemissionId = r.RemissionId,
-            RemissionFolioFormatted = r.Remission.FolioNumber.ToString("D6"),
+            RemissionFolioFormatted = r.Remission?.FolioNumber.ToString("D6") ?? string.Empty,
             Date = r.Date,
             Notes = r.Notes,
             ReceivedBy = r.ReceivedBy,

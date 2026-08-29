@@ -3,6 +3,7 @@ using System;
 using Librex.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Librex.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(LibrexDbContext))]
-    partial class LibrexDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260714040708_ReturnNoteRemissionOptional")]
+    partial class ReturnNoteRemissionOptional
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -315,19 +318,8 @@ namespace Librex.Infrastructure.Data.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<string>("SchoolLevel")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
                     b.Property<int>("SupplierId")
                         .HasColumnType("integer");
-
-                    b.Property<string>("UnitType")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasDefaultValue("Unidad");
 
                     b.HasKey("Id");
 

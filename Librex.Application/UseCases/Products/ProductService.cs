@@ -24,7 +24,7 @@ public class ProductService : IProductService
 
     public async Task<ProductDto> CreateAsync(CreateProductDto dto)
     {
-        var product = new Product { Name = dto.Name, Isbn = dto.Isbn, SupplierId = dto.SupplierId };
+        var product = new Product { Name = dto.Name, Isbn = dto.Isbn, SchoolLevel = dto.SchoolLevel, UnitType = dto.UnitType, SupplierId = dto.SupplierId };
         return MapToDto(await _repository.AddAsync(product));
     }
 
@@ -35,6 +35,8 @@ public class ProductService : IProductService
 
         product.Name = dto.Name;
         product.Isbn = dto.Isbn;
+        product.SchoolLevel = dto.SchoolLevel;
+        product.UnitType = dto.UnitType;
         product.SupplierId = dto.SupplierId;
         product.IsActive = dto.IsActive;
 
@@ -55,6 +57,8 @@ public class ProductService : IProductService
         Id = p.Id,
         Name = p.Name,
         Isbn = p.Isbn,
+        SchoolLevel = p.SchoolLevel,
+        UnitType = p.UnitType,
         SupplierId = p.SupplierId,
         SupplierName = p.Supplier?.Name ?? string.Empty,
         IsActive = p.IsActive,

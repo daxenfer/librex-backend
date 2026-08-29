@@ -100,7 +100,8 @@ public class ReportRepository : IReportRepository
                 .ToDictionary(x => x.RemissionId, x => x.Amount);
 
             // Prorratea cada asignación por la participación del proveedor en la remisión.
-            // Los anticipos (no asignados) no se atribuyen a ningún proveedor.
+            // Los anticipos (no asignados) no se atribuyen a ningún proveedor; se reportan
+            // aparte con GetUnallocatedPaymentsAsync para que los totales cuadren.
             paymentsDict = allocations
                 .GroupBy(a => new { a.CustomerId, a.CustomerName })
                 .ToDictionary(
@@ -195,51 +196,92 @@ public class ReportRepository : IReportRepository
                                g.Key.ProductId, g.Key.ProductName, Qty = (int)g.Sum(d => d.Quantity) })
             .ToListAsync();
 
-        // net quantity per (customerId, productId)
-        var netDict = new Dictionary<(int, int), int>();
+        // Vendido y devuelto por separado, por (customerId, productId). No se netean: un producto
+        // debe verse aunque se haya devuelto más de lo vendido.
+        var soldDict = new Dictionary<(int, int), int>();
+        var returnedDict = new Dictionary<(int, int), int>();
         var customerNames = new Dictionary<int, string>();
         var productNames = new Dictionary<int, string>();
 
         foreach (var s in sales)
         {
             var key = (s.CustomerId, s.ProductId);
-            netDict[key] = netDict.GetValueOrDefault(key) + s.Qty;
+            soldDict[key] = soldDict.GetValueOrDefault(key) + s.Qty;
             customerNames.TryAdd(s.CustomerId, s.CustomerName);
             productNames.TryAdd(s.ProductId, s.ProductName);
         }
         foreach (var r in returns)
         {
             var key = (r.CustomerId, r.ProductId);
-            netDict[key] = netDict.GetValueOrDefault(key) - r.Qty;
+            returnedDict[key] = returnedDict.GetValueOrDefault(key) + r.Qty;
             customerNames.TryAdd(r.CustomerId, r.CustomerName);
             productNames.TryAdd(r.ProductId, r.ProductName);
         }
 
-        // keep only positive net quantities
-        var positiveEntries = netDict.Where(kv => kv.Value > 0).ToList();
+        // Un (cliente, producto) entra si tuvo ventas O devoluciones.
+        var allKeys = soldDict.Keys.Union(returnedDict.Keys).ToList();
 
-        var products = positiveEntries
-            .Select(kv => kv.Key.Item2)
+        var products = allKeys
+            .Select(k => k.Item2)
             .Distinct()
             .OrderBy(pid => productNames[pid])
             .Select(pid => new ProductColumnDto(pid, productNames[pid]))
             .ToList();
 
-        var customerIds = positiveEntries
-            .Select(kv => kv.Key.Item1)
+        var customerIds = allKeys
+            .Select(k => k.Item1)
             .Distinct()
             .OrderBy(cid => customerNames[cid])
             .ToList();
 
         var rows = customerIds.Select(cid =>
         {
-            var quantities = products.Select(p => netDict.GetValueOrDefault((cid, p.ProductId))).ToList();
-            return new CustomerProductRowDto(cid, customerNames[cid], quantities, quantities.Sum());
+            var sold = products.Select(p => soldDict.GetValueOrDefault((cid, p.ProductId))).ToList();
+            var returned = products.Select(p => returnedDict.GetValueOrDefault((cid, p.ProductId))).ToList();
+            return new CustomerProductRowDto(cid, customerNames[cid], sold, returned, sold.Sum(), returned.Sum());
         }).ToList();
 
-        var productTotals = products.Select(p => rows.Sum(r => r.Quantities[products.IndexOf(p)])).ToList();
-        var grandTotal = productTotals.Sum();
+        var productTotalsSold = products.Select((_, i) => rows.Sum(r => r.QuantitiesSold[i])).ToList();
+        var productTotalsReturned = products.Select((_, i) => rows.Sum(r => r.QuantitiesReturned[i])).ToList();
+        var grandTotalSold = productTotalsSold.Sum();
+        var grandTotalReturned = productTotalsReturned.Sum();
 
-        return new SalesByProductReportDto(supplierId, string.Empty, products, rows, productTotals, grandTotal);
+        return new SalesByProductReportDto(
+            supplierId, string.Empty, products, rows,
+            productTotalsSold, productTotalsReturned, grandTotalSold, grandTotalReturned);
+    }
+
+    public async Task<UnallocatedPaymentsReportDto> GetUnallocatedPaymentsAsync()
+    {
+        // Total recibido por cliente (pagos activos).
+        var payments = await _context.Payments
+            .Where(p => p.IsActive)
+            .GroupBy(p => new { p.CustomerId, CustomerName = p.Customer.Name })
+            .Select(g => new {
+                g.Key.CustomerId,
+                g.Key.CustomerName,
+                Total = g.Sum(p => p.Amount)
+            })
+            .ToListAsync();
+
+        // Monto ya aplicado a remisiones por cliente (asignaciones activas de pagos activos).
+        var allocated = await _context.PaymentAllocations
+            .Where(a => a.IsActive && a.Payment.IsActive)
+            .GroupBy(a => a.Payment.CustomerId)
+            .Select(g => new { CustomerId = g.Key, Amount = g.Sum(a => a.Amount) })
+            .ToDictionaryAsync(x => x.CustomerId, x => x.Amount);
+
+        var rows = payments
+            .Select(p =>
+            {
+                var applied = allocated.GetValueOrDefault(p.CustomerId);
+                return new UnallocatedPaymentRowDto(
+                    p.CustomerId, p.CustomerName, p.Total, applied, p.Total - applied);
+            })
+            .Where(r => r.UnallocatedAmount > 0.005m)
+            .OrderBy(r => r.CustomerName)
+            .ToList();
+
+        return new UnallocatedPaymentsReportDto(rows, rows.Sum(r => r.UnallocatedAmount));
     }
 }

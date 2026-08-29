@@ -21,8 +21,8 @@ public class CreateReturnNoteDto
     [Required]
     public int CustomerId { get; set; }
 
-    [Required]
-    public int RemissionId { get; set; }
+    // Opcional: la devolución puede capturarse a nivel cliente y ligarse a una remisión después.
+    public int? RemissionId { get; set; }
 
     [Required]
     public DateTime Date { get; set; }

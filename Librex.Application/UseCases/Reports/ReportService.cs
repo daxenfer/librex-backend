@@ -43,4 +43,7 @@ public class ReportService : IReportService
             SupplierName = supplierName,
         };
     }
+
+    public Task<UnallocatedPaymentsReportDto> GetUnallocatedPaymentsAsync()
+        => _repository.GetUnallocatedPaymentsAsync();
 }

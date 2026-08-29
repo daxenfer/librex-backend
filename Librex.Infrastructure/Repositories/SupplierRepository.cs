@@ -1,4 +1,5 @@
 using Librex.Domain.Entities;
+using Librex.Domain.Enums;
 using Librex.Domain.Interfaces;
 using Librex.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -36,13 +37,16 @@ public class SupplierRepository : ISupplierRepository
         await _context.SaveChangesAsync();
     }
 
+    // Borrado físico en cascada. Un solo SaveChangesAsync para que EF lo resuelva
+    // dentro de una transacción: o se va todo, o no se va nada.
     public async Task DeleteAsync(int id)
     {
         var supplier = await _context.Suppliers.FindAsync(id);
-        if (supplier is not null)
-        {
-            supplier.IsActive = false;
-            await _context.SaveChangesAsync();
-        }
+        if (supplier is null) return;
+
+        var dependents = await DeletionGraph.ResolveAsync(_context, DeletableEntity.Supplier, id);
+        dependents.RemoveFrom(_context);
+        _context.Suppliers.Remove(supplier);
+        await _context.SaveChangesAsync();
     }
 }

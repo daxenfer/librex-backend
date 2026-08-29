@@ -5,6 +5,8 @@ public record SalesByProductReportDto(
     string SupplierName,
     IReadOnlyList<ProductColumnDto> Products,
     IReadOnlyList<CustomerProductRowDto> Rows,
-    IReadOnlyList<int> ProductTotals,
-    int GrandTotal
+    IReadOnlyList<int> ProductTotalsSold,
+    IReadOnlyList<int> ProductTotalsReturned,
+    int GrandTotalSold,
+    int GrandTotalReturned
 );

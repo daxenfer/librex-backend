@@ -1,4 +1,5 @@
 using Librex.Domain.Entities;
+using Librex.Domain.Enums;
 using Librex.Domain.Interfaces;
 using Librex.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -58,13 +59,16 @@ public class PaymentRepository : IPaymentRepository
         await _context.SaveChangesAsync();
     }
 
+    // Borrado físico en cascada. Un solo SaveChangesAsync para que EF lo resuelva
+    // dentro de una transacción: o se va todo, o no se va nada.
     public async Task DeleteAsync(int id)
     {
         var payment = await _context.Payments.FindAsync(id);
-        if (payment is not null)
-        {
-            payment.IsActive = false;
-            await _context.SaveChangesAsync();
-        }
+        if (payment is null) return;
+
+        var dependents = await DeletionGraph.ResolveAsync(_context, DeletableEntity.Payment, id);
+        dependents.RemoveFrom(_context);
+        _context.Payments.Remove(payment);
+        await _context.SaveChangesAsync();
     }
 }

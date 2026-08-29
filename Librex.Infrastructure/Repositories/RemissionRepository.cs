@@ -1,4 +1,5 @@
 using Librex.Domain.Entities;
+using Librex.Domain.Enums;
 using Librex.Domain.Interfaces;
 using Librex.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -60,13 +61,16 @@ public class RemissionRepository : IRemissionRepository
         await _context.SaveChangesAsync();
     }
 
+    // Borrado físico en cascada. Un solo SaveChangesAsync para que EF lo resuelva
+    // dentro de una transacción: o se va todo, o no se va nada.
     public async Task DeleteAsync(int id)
     {
         var remission = await _context.Remissions.FindAsync(id);
-        if (remission is not null)
-        {
-            remission.IsActive = false;
-            await _context.SaveChangesAsync();
-        }
+        if (remission is null) return;
+
+        var dependents = await DeletionGraph.ResolveAsync(_context, DeletableEntity.Remission, id);
+        dependents.RemoveFrom(_context);
+        _context.Remissions.Remove(remission);
+        await _context.SaveChangesAsync();
     }
 }

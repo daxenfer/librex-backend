@@ -24,4 +24,8 @@ public class ReportsController : ControllerBase
     [HttpGet("sales-by-product")]
     public async Task<ActionResult<SalesByProductReportDto>> SalesByProduct([FromQuery] int? supplierId)
         => Ok(await _service.GetSalesByProductAsync(supplierId));
+
+    [HttpGet("unallocated-payments")]
+    public async Task<ActionResult<UnallocatedPaymentsReportDto>> UnallocatedPayments()
+        => Ok(await _service.GetUnallocatedPaymentsAsync());
 }

@@ -12,6 +12,8 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.HasKey(p => p.Id);
         builder.Property(p => p.Name).IsRequired().HasMaxLength(200);
         builder.Property(p => p.Isbn).HasMaxLength(50);
+        builder.Property(p => p.SchoolLevel).HasMaxLength(20);
+        builder.Property(p => p.UnitType).IsRequired().HasMaxLength(20).HasDefaultValue("Unidad");
         builder.HasOne(p => p.Supplier)
                .WithMany()
                .HasForeignKey(p => p.SupplierId)
