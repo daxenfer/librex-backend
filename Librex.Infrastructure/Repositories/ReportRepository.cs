@@ -59,7 +59,12 @@ public class ReportRepository : IReportRepository
         var returnsQuery = _context.ReturnNoteDetails
             .Where(d => d.IsActive && d.ReturnNote.IsActive);
         if (supplierId.HasValue)
-            returnsQuery = returnsQuery.Where(d => d.Product.SupplierId == supplierId.Value);
+            // Mismo criterio que ya se aplica a los pagos: solo lo ligado a una remisión se le
+            // atribuye a un proveedor. Las devoluciones sueltas se reportan aparte, con
+            // GetUnlinkedReturnsAsync, para que los totales cuadren.
+            returnsQuery = returnsQuery
+                .Where(d => d.Product.SupplierId == supplierId.Value)
+                .Where(d => d.ReturnNote.RemissionId != null);
 
         var returns = await returnsQuery
             .GroupBy(d => new { d.ReturnNote.CustomerId, Name = d.ReturnNote.Customer.Name })
@@ -283,5 +288,37 @@ public class ReportRepository : IReportRepository
             .ToList();
 
         return new UnallocatedPaymentsReportDto(rows, rows.Sum(r => r.UnallocatedAmount));
+    }
+
+    // Espejo de GetUnallocatedPaymentsAsync para el otro lado del mostrador: lo que se devolvió
+    // sin decir contra qué venta. Igual que los anticipos, no se atribuye a ningún proveedor.
+    public async Task<UnlinkedReturnsReportDto> GetUnlinkedReturnsAsync()
+    {
+        var notes = await _context.ReturnNotes
+            .Where(n => n.IsActive && n.RemissionId == null)
+            .Select(n => new
+            {
+                n.CustomerId,
+                CustomerName = n.Customer.Name,
+                n.Discount,
+                n.UnlinkedReason,
+                Subtotal = n.Details.Where(d => d.IsActive).Sum(d => d.Quantity * d.UnitPrice),
+            })
+            .ToListAsync();
+
+        var rows = notes
+            .GroupBy(n => new { n.CustomerId, n.CustomerName })
+            .Select(g => new UnlinkedReturnRowDto(
+                g.Key.CustomerId,
+                g.Key.CustomerName,
+                g.Count(),
+                g.Sum(n => n.Subtotal - n.Discount),
+                string.Join("; ", g.Select(n => n.UnlinkedReason)
+                    .Where(r => !string.IsNullOrWhiteSpace(r))
+                    .Distinct())))
+            .OrderBy(r => r.CustomerName)
+            .ToList();
+
+        return new UnlinkedReturnsReportDto(rows, rows.Sum(r => r.UnlinkedAmount));
     }
 }

@@ -71,7 +71,6 @@ public class RemissionService : IRemissionService
         remission.PaymentDueDate = dto.PaymentDueDate;
         remission.ReturnPercentage = dto.ReturnPercentage;
         remission.ReturnDueDate = dto.ReturnDueDate;
-        remission.IsActive = dto.IsActive;
 
         remission.Details.Clear();
         foreach (var d in dto.Details)
@@ -105,6 +104,7 @@ public class RemissionService : IRemissionService
             Id = d.Id,
             ProductId = d.ProductId,
             ProductName = d.Product?.Name ?? string.Empty,
+            Isbn = d.Product?.Isbn,
             SupplierName = d.Product?.Supplier?.Name,
             Teacher = d.Teacher,
             Quantity = d.Quantity,

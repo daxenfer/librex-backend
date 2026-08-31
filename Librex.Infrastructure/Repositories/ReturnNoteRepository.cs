@@ -16,7 +16,7 @@ public class ReturnNoteRepository : IReturnNoteRepository
     }
 
     public async Task<ReturnNote?> GetByIdAsync(int id)
-        => await _context.ReturnNotes.FirstOrDefaultAsync(r => r.Id == id);
+        => await _context.ReturnNotes.FirstOrDefaultAsync(r => r.Id == id && r.IsActive);
 
     public async Task<ReturnNote?> GetByIdWithDetailsAsync(int id)
         => await _context.ReturnNotes
@@ -25,7 +25,7 @@ public class ReturnNoteRepository : IReturnNoteRepository
             .Include(r => r.Details)
                 .ThenInclude(d => d.Product)
                     .ThenInclude(p => p.Supplier)
-            .FirstOrDefaultAsync(r => r.Id == id);
+            .FirstOrDefaultAsync(r => r.Id == id && r.IsActive);
 
     public async Task<IEnumerable<ReturnNote>> GetAllAsync()
         => await _context.ReturnNotes
@@ -43,6 +43,8 @@ public class ReturnNoteRepository : IReturnNoteRepository
             .OrderByDescending(r => r.Date)
             .ToListAsync();
 
+    // No filtra IsActive a propósito: el folio de un documento eliminado queda quemado y no se
+    // reutiliza, evitando colisiones con el índice único de FolioNumber.
     public async Task<int> GetNextFolioAsync()
     {
         var max = await _context.ReturnNotes
@@ -64,16 +66,17 @@ public class ReturnNoteRepository : IReturnNoteRepository
         await _context.SaveChangesAsync();
     }
 
-    // Borrado físico en cascada. Un solo SaveChangesAsync para que EF lo resuelva
-    // dentro de una transacción: o se va todo, o no se va nada.
+    // Borrado lógico en cascada: la raíz y sus dependientes se marcan como inactivos en un
+    // solo SaveChangesAsync. Nada se destruye, así que los documentos ya emitidos que citan
+    // este registro conservan su historia intacta.
     public async Task DeleteAsync(int id)
     {
         var returnNote = await _context.ReturnNotes.FindAsync(id);
         if (returnNote is null) return;
 
         var dependents = await DeletionGraph.ResolveAsync(_context, DeletableEntity.ReturnNote, id);
-        dependents.RemoveFrom(_context);
-        _context.ReturnNotes.Remove(returnNote);
+        dependents.Deactivate();
+        returnNote.IsActive = false;
         await _context.SaveChangesAsync();
     }
 }

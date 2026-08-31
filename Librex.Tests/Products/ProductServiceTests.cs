@@ -78,7 +78,7 @@ public class ProductServiceTests
         _repo.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(existing);
         _repo.Setup(r => r.UpdateAsync(It.IsAny<Product>())).Returns(Task.CompletedTask);
 
-        var result = await _sut.UpdateAsync(1, new UpdateProductDto { Name = "Updated Name", IsActive = true });
+        var result = await _sut.UpdateAsync(1, new UpdateProductDto { Name = "Updated Name" });
 
         Assert.NotNull(result);
         Assert.Equal("Updated Name", result.Name);
@@ -90,7 +90,7 @@ public class ProductServiceTests
     {
         _repo.Setup(r => r.GetByIdAsync(99)).ReturnsAsync((Product?)null);
 
-        var result = await _sut.UpdateAsync(99, new UpdateProductDto { Name = "X", IsActive = true });
+        var result = await _sut.UpdateAsync(99, new UpdateProductDto { Name = "X" });
 
         Assert.Null(result);
         _repo.Verify(r => r.UpdateAsync(It.IsAny<Product>()), Times.Never);

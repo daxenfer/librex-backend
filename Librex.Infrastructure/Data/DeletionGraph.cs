@@ -5,9 +5,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Librex.Infrastructure.Data;
 
-// Registros dependientes que caen junto con una entidad raíz.
-// El orden en RemoveFrom no es arbitrario: borra hijos antes que padres para no violar
-// las FKs Restrict de Postgres.
+// Registros dependientes que se marcan como inactivos junto con una entidad raíz.
+// El borrado es lógico: nada se destruye, solo deja de existir para la aplicación.
 internal sealed class DeletionSet
 {
     public List<PaymentAllocation> PaymentAllocations { get; init; } = [];
@@ -32,21 +31,33 @@ internal sealed class DeletionSet
         }.Where(d => d.Count > 0)
     ];
 
-    public void RemoveFrom(LibrexDbContext context)
+    // Las entidades vienen trackeadas del context, así que basta con bajar la bandera; el
+    // SaveChangesAsync del repositorio las persiste todas en una sola transacción. A diferencia
+    // del borrado físico, aquí el orden no importa: no hay FKs de por medio.
+    public void Deactivate()
     {
-        context.PaymentAllocations.RemoveRange(PaymentAllocations);
-        context.Payments.RemoveRange(Payments);
-        context.ReturnNoteDetails.RemoveRange(ReturnNoteDetails);
-        context.ReturnNotes.RemoveRange(ReturnNotes);
-        context.RemissionDetails.RemoveRange(RemissionDetails);
-        context.Remissions.RemoveRange(Remissions);
-        context.Products.RemoveRange(Products);
+        foreach (var entity in All()) entity.IsActive = false;
     }
+
+    private IEnumerable<BaseEntity> All() =>
+    [
+        .. PaymentAllocations.Cast<BaseEntity>(),
+        .. Payments,
+        .. ReturnNoteDetails,
+        .. ReturnNotes,
+        .. RemissionDetails,
+        .. Remissions,
+        .. Products,
+    ];
 }
 
-// Única definición del grafo de dependencias del borrado en cascada. La usan tanto el conteo de
-// impacto (DeletionRepository) como el borrado real (los DeleteAsync de cada repositorio), para
-// que lo que se anuncia y lo que se borra no puedan divergir.
+// Única definición del grafo de dependencias del borrado. La usan tanto el conteo de impacto
+// (DeletionRepository) como el borrado real (los DeleteAsync de cada repositorio), para que lo
+// que se anuncia y lo que se elimina no puedan divergir.
+//
+// Regla de oro: nunca se toca un renglón cuyo encabezado sobrevive. Por eso eliminar un producto
+// o un proveedor no arrastra renglones de remisión ni de devolución: mutilaría documentos ya
+// emitidos, cambiando totales impresos y saldos de cuentas por cobrar.
 internal static class DeletionGraph
 {
     public static Task<DeletionSet> ResolveAsync(LibrexDbContext context, DeletableEntity entity, int id) => entity switch
@@ -60,8 +71,51 @@ internal static class DeletionGraph
         _ => Task.FromResult(new DeletionSet()),
     };
 
+    // Referencias que sobreviven: documentos ya emitidos que seguirán citando la entidad. Se
+    // cuentan para poder decirle al usuario que su histórico queda intacto. Es el complemento
+    // exacto de lo que ResolveAsync deliberadamente NO se lleva.
+    public static async Task<IReadOnlyList<DeletionDependent>> ResolvePreservedAsync(
+        LibrexDbContext context, DeletableEntity entity, int id)
+    {
+        List<int> productIds = entity switch
+        {
+            DeletableEntity.Product => [id],
+            DeletableEntity.Supplier => await context.Products
+                .Where(p => p.SupplierId == id)
+                .Select(p => p.Id)
+                .ToListAsync(),
+            _ => [],
+        };
+
+        if (productIds.Count == 0) return [];
+
+        // Documentos distintos, no renglones: al usuario le importa en cuántas remisiones
+        // aparece el producto, no cuántas veces aparece dentro de cada una.
+        var remissions = await context.RemissionDetails
+            .Where(d => productIds.Contains(d.ProductId))
+            .Select(d => d.RemissionId)
+            .Distinct()
+            .CountAsync();
+
+        var returnNotes = await context.ReturnNoteDetails
+            .Where(d => productIds.Contains(d.ProductId))
+            .Select(d => d.ReturnNoteId)
+            .Distinct()
+            .CountAsync();
+
+        return
+        [
+            .. new DeletionDependent[]
+            {
+                new(DependentKind.Remission, remissions),
+                new(DependentKind.ReturnNote, returnNotes),
+            }.Where(d => d.Count > 0)
+        ];
+    }
+
     // Un cliente arrastra todos sus documentos: remisiones (con sus líneas), devoluciones
-    // (propias o ligadas a alguna de esas remisiones) y pagos (con sus asignaciones).
+    // (propias o ligadas a alguna de esas remisiones) y pagos (con sus asignaciones). Se van
+    // documentos completos, así que ninguno queda mutilado.
     private static async Task<DeletionSet> ResolveCustomerAsync(LibrexDbContext context, int id)
     {
         var remissions = await context.Remissions.Where(r => r.CustomerId == id).ToListAsync();
@@ -89,31 +143,20 @@ internal static class DeletionGraph
         };
     }
 
-    // Un proveedor arrastra sus productos, y cada producto sus líneas de documento.
-    // Los encabezados (remisiones, devoluciones, pagos) no se tocan.
-    private static async Task<DeletionSet> ResolveSupplierAsync(LibrexDbContext context, int id)
+    // Un proveedor arrastra sus productos, y nada más. Los renglones de remisión y devolución
+    // que citan esos productos quedan intactos: pertenecen a documentos que sobreviven.
+    private static async Task<DeletionSet> ResolveSupplierAsync(LibrexDbContext context, int id) => new()
     {
-        var products = await context.Products.Where(p => p.SupplierId == id).ToListAsync();
-        var productIds = products.Select(p => p.Id).ToList();
-
-        return new DeletionSet
-        {
-            Products = products,
-            RemissionDetails = await context.RemissionDetails
-                .Where(d => productIds.Contains(d.ProductId)).ToListAsync(),
-            ReturnNoteDetails = await context.ReturnNoteDetails
-                .Where(d => productIds.Contains(d.ProductId)).ToListAsync(),
-        };
-    }
-
-    private static async Task<DeletionSet> ResolveProductAsync(LibrexDbContext context, int id) => new()
-    {
-        RemissionDetails = await context.RemissionDetails.Where(d => d.ProductId == id).ToListAsync(),
-        ReturnNoteDetails = await context.ReturnNoteDetails.Where(d => d.ProductId == id).ToListAsync(),
+        Products = await context.Products.Where(p => p.SupplierId == id).ToListAsync(),
     };
+
+    // Un producto no arrastra nada: sus renglones viven dentro de documentos que sobreviven.
+    private static Task<DeletionSet> ResolveProductAsync(LibrexDbContext context, int id)
+        => Task.FromResult(new DeletionSet());
 
     // Una remisión arrastra sus líneas, las asignaciones de pago que la apuntan y las
     // devoluciones ligadas a ella (RemissionId es nullable, pero se trata como cascada).
+    // El pago sobrevive: al perder su asignación, su monto vuelve a quedar como anticipo.
     private static async Task<DeletionSet> ResolveRemissionAsync(LibrexDbContext context, int id)
     {
         var returnNotes = await context.ReturnNotes.Where(n => n.RemissionId == id).ToListAsync();

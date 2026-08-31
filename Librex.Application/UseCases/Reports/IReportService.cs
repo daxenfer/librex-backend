@@ -7,4 +7,5 @@ public interface IReportService
     Task<SupplierReportDto> GetBySupplierAsync(int? supplierId);
     Task<SalesByProductReportDto> GetSalesByProductAsync(int? supplierId);
     Task<UnallocatedPaymentsReportDto> GetUnallocatedPaymentsAsync();
+    Task<UnlinkedReturnsReportDto> GetUnlinkedReturnsAsync();
 }

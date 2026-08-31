@@ -24,13 +24,18 @@ public class DeletionService : IDeletionService
         EntityType = impact.Entity.ToString(),
         Id = impact.Id,
         Label = impact.Label,
-        Items = [.. impact.Dependents.Select(d => new DeletionImpactItemDto
+        Items = MapItems(impact.Dependents),
+        TotalDependents = impact.Dependents.Sum(d => d.Count),
+        PreservedItems = MapItems(impact.Preserved),
+        TotalPreserved = impact.Preserved.Sum(d => d.Count),
+    };
+
+    private static List<DeletionImpactItemDto> MapItems(IReadOnlyList<DeletionDependent> dependents)
+        => [.. dependents.Select(d => new DeletionImpactItemDto
         {
             EntityName = NameOf(d.Kind),
             Count = d.Count,
-        })],
-        TotalDependents = impact.Dependents.Sum(d => d.Count),
-    };
+        })];
 
     private static string NameOf(DependentKind kind) => kind switch
     {

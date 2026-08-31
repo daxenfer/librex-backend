@@ -28,4 +28,8 @@ public class ReportsController : ControllerBase
     [HttpGet("unallocated-payments")]
     public async Task<ActionResult<UnallocatedPaymentsReportDto>> UnallocatedPayments()
         => Ok(await _service.GetUnallocatedPaymentsAsync());
+
+    [HttpGet("unlinked-returns")]
+    public async Task<ActionResult<UnlinkedReturnsReportDto>> UnlinkedReturns()
+        => Ok(await _service.GetUnlinkedReturnsAsync());
 }

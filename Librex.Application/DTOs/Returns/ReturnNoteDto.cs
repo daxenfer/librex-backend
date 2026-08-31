@@ -9,6 +9,7 @@ public class ReturnNoteDto
     public string CustomerName { get; set; } = string.Empty;
     public int? RemissionId { get; set; }
     public string RemissionFolioFormatted { get; set; } = string.Empty;
+    public string? UnlinkedReason { get; set; }
     public DateTime Date { get; set; }
     public string? Notes { get; set; }
     public string? ReceivedBy { get; set; }

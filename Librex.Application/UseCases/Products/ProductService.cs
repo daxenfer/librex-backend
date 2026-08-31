@@ -38,7 +38,6 @@ public class ProductService : IProductService
         product.SchoolLevel = dto.SchoolLevel;
         product.UnitType = dto.UnitType;
         product.SupplierId = dto.SupplierId;
-        product.IsActive = dto.IsActive;
 
         await _repository.UpdateAsync(product);
         return MapToDto(product);

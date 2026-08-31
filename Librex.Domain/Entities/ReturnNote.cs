@@ -7,6 +7,9 @@ public class ReturnNote : BaseEntity
     public Customer Customer { get; set; } = null!;
     public int? RemissionId { get; set; }
     public Remission? Remission { get; set; }
+    // Por qué esta devolución no corresponde a ninguna remisión. Obligatorio cuando RemissionId
+    // es null: capturar una nota suelta sigue siendo posible, pero no en silencio.
+    public string? UnlinkedReason { get; set; }
     public DateTime Date { get; set; }
     public string? Notes { get; set; }
     public string? ReceivedBy { get; set; }

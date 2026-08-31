@@ -12,6 +12,7 @@ public class ReturnNoteConfiguration : IEntityTypeConfiguration<ReturnNote>
         builder.HasKey(r => r.Id);
         builder.Property(r => r.FolioNumber).IsRequired();
         builder.Property(r => r.ReceivedBy).HasMaxLength(200);
+        builder.Property(r => r.UnlinkedReason).HasMaxLength(500);
         builder.Property(r => r.Discount).HasColumnType("numeric(10,2)");
 
         builder.HasIndex(r => r.FolioNumber).IsUnique();

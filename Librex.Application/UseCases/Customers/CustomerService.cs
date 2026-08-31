@@ -47,7 +47,6 @@ public class CustomerService : ICustomerService
         customer.PostalCode = dto.PostalCode;
         customer.Phone = dto.Phone;
         customer.City = dto.City;
-        customer.IsActive = dto.IsActive;
 
         await _repository.UpdateAsync(customer);
         return MapToDto(customer);

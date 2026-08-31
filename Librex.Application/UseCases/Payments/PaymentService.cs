@@ -1,5 +1,6 @@
 using Librex.Application.DTOs.Payments;
 using Librex.Domain.Entities;
+using Librex.Domain.Exceptions;
 using Librex.Domain.Interfaces;
 
 namespace Librex.Application.UseCases.Payments;
@@ -7,10 +8,12 @@ namespace Librex.Application.UseCases.Payments;
 public class PaymentService : IPaymentService
 {
     private readonly IPaymentRepository _repository;
+    private readonly IRemissionRepository _remissions;
 
-    public PaymentService(IPaymentRepository repository)
+    public PaymentService(IPaymentRepository repository, IRemissionRepository remissions)
     {
         _repository = repository;
+        _remissions = remissions;
     }
 
     public async Task<IEnumerable<PaymentDto>> GetAllAsync()
@@ -24,6 +27,8 @@ public class PaymentService : IPaymentService
 
     public async Task<PaymentDto> CreateAsync(CreatePaymentDto dto)
     {
+        await EnsureAllocationsBelongToCustomerAsync(dto.Allocations, dto.CustomerId);
+
         var folio = await _repository.GetNextFolioAsync();
 
         var payment = new Payment
@@ -52,6 +57,8 @@ public class PaymentService : IPaymentService
         var payment = await _repository.GetByIdWithCustomerAsync(id);
         if (payment is null) return null;
 
+        await EnsureAllocationsBelongToCustomerAsync(dto.Allocations, dto.CustomerId);
+
         payment.CustomerId = dto.CustomerId;
         payment.Date = dto.Date;
         payment.Amount = dto.Amount;
@@ -62,7 +69,6 @@ public class PaymentService : IPaymentService
         payment.Concept = dto.Concept;
         payment.CollectedBy = dto.CollectedBy;
         payment.City = dto.City;
-        payment.IsActive = dto.IsActive;
 
         payment.Allocations.Clear();
         foreach (var a in BuildAllocations(dto.Allocations))
@@ -79,6 +85,22 @@ public class PaymentService : IPaymentService
         if (payment is null) return false;
         await _repository.DeleteAsync(id);
         return true;
+    }
+
+    // Un pago solo puede aplicarse a remisiones del mismo cliente. El editor de reparto ya solo
+    // ofrece las suyas, pero por API no había nada que lo impidiera.
+    private async Task EnsureAllocationsBelongToCustomerAsync(
+        IEnumerable<CreatePaymentAllocationDto> allocations, int customerId)
+    {
+        var remissionIds = allocations.Where(a => a.Amount > 0).Select(a => a.RemissionId).Distinct();
+        foreach (var remissionId in remissionIds)
+        {
+            var remission = await _remissions.GetByIdAsync(remissionId);
+            if (remission is null)
+                throw new BusinessRuleException("Una de las remisiones del reparto no existe o fue eliminada.");
+            if (remission.CustomerId != customerId)
+                throw new BusinessRuleException($"La remisión {remission.FolioNumber:D6} pertenece a otro cliente.");
+        }
     }
 
     // Solo asignaciones con monto positivo; la suma no debe exceder el monto recibido

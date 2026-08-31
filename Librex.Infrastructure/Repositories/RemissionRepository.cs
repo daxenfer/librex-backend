@@ -16,15 +16,18 @@ public class RemissionRepository : IRemissionRepository
     }
 
     public async Task<Remission?> GetByIdAsync(int id)
-        => await _context.Remissions.FirstOrDefaultAsync(r => r.Id == id);
+        => await _context.Remissions.FirstOrDefaultAsync(r => r.Id == id && r.IsActive);
 
+    // Details no se filtra por IsActive a propósito: un renglón solo se da de baja cuando su
+    // remisión también, y esta ya viene filtrada. Al editar, los renglones se reemplazan
+    // físicamente, así que nunca hay filas inactivas colgando de una remisión activa.
     public async Task<Remission?> GetByIdWithDetailsAsync(int id)
         => await _context.Remissions
             .Include(r => r.Customer)
             .Include(r => r.Details)
                 .ThenInclude(d => d.Product)
                     .ThenInclude(p => p.Supplier)
-            .FirstOrDefaultAsync(r => r.Id == id);
+            .FirstOrDefaultAsync(r => r.Id == id && r.IsActive);
 
     public async Task<IEnumerable<Remission>> GetAllAsync()
         => await _context.Remissions
@@ -40,6 +43,8 @@ public class RemissionRepository : IRemissionRepository
             .OrderByDescending(r => r.Date)
             .ToListAsync();
 
+    // No filtra IsActive a propósito: el folio de un documento eliminado queda quemado y no se
+    // reutiliza, evitando colisiones con el índice único de FolioNumber.
     public async Task<int> GetNextFolioAsync()
     {
         var max = await _context.Remissions
@@ -61,16 +66,17 @@ public class RemissionRepository : IRemissionRepository
         await _context.SaveChangesAsync();
     }
 
-    // Borrado físico en cascada. Un solo SaveChangesAsync para que EF lo resuelva
-    // dentro de una transacción: o se va todo, o no se va nada.
+    // Borrado lógico en cascada: la raíz y sus dependientes se marcan como inactivos en un
+    // solo SaveChangesAsync. Nada se destruye, así que los documentos ya emitidos que citan
+    // este registro conservan su historia intacta.
     public async Task DeleteAsync(int id)
     {
         var remission = await _context.Remissions.FindAsync(id);
         if (remission is null) return;
 
         var dependents = await DeletionGraph.ResolveAsync(_context, DeletableEntity.Remission, id);
-        dependents.RemoveFrom(_context);
-        _context.Remissions.Remove(remission);
+        dependents.Deactivate();
+        remission.IsActive = false;
         await _context.SaveChangesAsync();
     }
 }

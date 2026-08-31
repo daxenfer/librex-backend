@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Librex.Domain.Entities;
+using Librex.Domain.Exceptions;
 using Librex.Infrastructure.Data;
 
 namespace Librex.API.Middleware;
@@ -63,6 +64,18 @@ public class ErrorLoggingMiddleware
             // El cliente cerró la conexión o navegó a otra página: no es un error de la app.
             // Loguearlo ensuciaría la tabla con ruido cada vez que alguien es impaciente.
             throw;
+        }
+        catch (BusinessRuleException ex)
+        {
+            // Una regla de negocio violada es un error del usuario, no una falla del sistema: se
+            // responde con su mensaje y NO entra al pipeline de logging, por la misma razón que el
+            // caso de arriba — llenaría la tabla de ruido cotidiano.
+            if (!context.Response.HasStarted)
+            {
+                context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsync(JsonSerializer.Serialize(new { error = ex.Message }));
+            }
         }
         catch (Exception ex)
         {

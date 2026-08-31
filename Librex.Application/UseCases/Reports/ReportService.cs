@@ -46,4 +46,7 @@ public class ReportService : IReportService
 
     public Task<UnallocatedPaymentsReportDto> GetUnallocatedPaymentsAsync()
         => _repository.GetUnallocatedPaymentsAsync();
+
+    public Task<UnlinkedReturnsReportDto> GetUnlinkedReturnsAsync()
+        => _repository.GetUnlinkedReturnsAsync();
 }

@@ -43,7 +43,6 @@ public class SupplierService : ISupplierService
         supplier.Contact = dto.Contact;
         supplier.Phone = dto.Phone;
         supplier.Email = dto.Email;
-        supplier.IsActive = dto.IsActive;
 
         await _repository.UpdateAsync(supplier);
         return MapToDto(supplier);

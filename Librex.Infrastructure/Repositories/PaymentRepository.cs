@@ -16,13 +16,16 @@ public class PaymentRepository : IPaymentRepository
     }
 
     public async Task<Payment?> GetByIdAsync(int id)
-        => await _context.Payments.FirstOrDefaultAsync(p => p.Id == id);
+        => await _context.Payments.FirstOrDefaultAsync(p => p.Id == id && p.IsActive);
 
+    // Las asignaciones se filtran por IsActive: al eliminar una remisión, sus asignaciones se dan
+    // de baja pero el pago sobrevive. Sin este filtro, AppliedAmount las seguiría contando y el
+    // dinero nunca volvería a aparecer como anticipo del cliente.
     public async Task<Payment?> GetByIdWithCustomerAsync(int id)
         => await _context.Payments
             .Include(p => p.Customer)
-            .Include(p => p.Allocations).ThenInclude(a => a.Remission)
-            .FirstOrDefaultAsync(p => p.Id == id);
+            .Include(p => p.Allocations.Where(a => a.IsActive)).ThenInclude(a => a.Remission)
+            .FirstOrDefaultAsync(p => p.Id == id && p.IsActive);
 
     public async Task<IEnumerable<Payment>> GetAllAsync()
         => await _context.Payments
@@ -33,11 +36,13 @@ public class PaymentRepository : IPaymentRepository
     public async Task<IEnumerable<Payment>> GetAllWithCustomerAsync()
         => await _context.Payments
             .Include(p => p.Customer)
-            .Include(p => p.Allocations).ThenInclude(a => a.Remission)
+            .Include(p => p.Allocations.Where(a => a.IsActive)).ThenInclude(a => a.Remission)
             .Where(p => p.IsActive)
             .OrderByDescending(p => p.Date)
             .ToListAsync();
 
+    // No filtra IsActive a propósito: el folio de un documento eliminado queda quemado y no se
+    // reutiliza, evitando colisiones con el índice único de FolioNumber.
     public async Task<int> GetNextFolioAsync()
     {
         var max = await _context.Payments
@@ -59,16 +64,17 @@ public class PaymentRepository : IPaymentRepository
         await _context.SaveChangesAsync();
     }
 
-    // Borrado físico en cascada. Un solo SaveChangesAsync para que EF lo resuelva
-    // dentro de una transacción: o se va todo, o no se va nada.
+    // Borrado lógico en cascada: la raíz y sus dependientes se marcan como inactivos en un
+    // solo SaveChangesAsync. Nada se destruye, así que los documentos ya emitidos que citan
+    // este registro conservan su historia intacta.
     public async Task DeleteAsync(int id)
     {
         var payment = await _context.Payments.FindAsync(id);
         if (payment is null) return;
 
         var dependents = await DeletionGraph.ResolveAsync(_context, DeletableEntity.Payment, id);
-        dependents.RemoveFrom(_context);
-        _context.Payments.Remove(payment);
+        dependents.Deactivate();
+        payment.IsActive = false;
         await _context.SaveChangesAsync();
     }
 }
