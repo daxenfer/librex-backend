@@ -2,6 +2,7 @@ using Librex.Application.DTOs.Payments;
 using Librex.Application.UseCases.Payments;
 using Librex.Application.DTOs.Deletion;
 using Librex.Application.UseCases.Deletion;
+using Librex.Domain.Constants;
 using Librex.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -34,6 +35,7 @@ public class PaymentsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = Permissions.PaymentsWrite)]
     public async Task<ActionResult<PaymentDto>> Create([FromBody] CreatePaymentDto dto)
     {
         var created = await _service.CreateAsync(dto);
@@ -41,6 +43,7 @@ public class PaymentsController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [Authorize(Policy = Permissions.PaymentsWrite)]
     public async Task<ActionResult<PaymentDto>> Update(int id, [FromBody] UpdatePaymentDto dto)
     {
         var updated = await _service.UpdateAsync(id, dto);
@@ -57,6 +60,7 @@ public class PaymentsController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
+    [Authorize(Policy = Permissions.PaymentsDelete)]
     public async Task<IActionResult> Delete(int id)
     {
         var deleted = await _service.DeleteAsync(id);

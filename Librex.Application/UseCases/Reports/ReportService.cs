@@ -16,11 +16,11 @@ public class ReportService : IReportService
 
     public async Task<SupplierReportDto> GetBySupplierAsync(int? supplierId)
     {
-        string supplierName = "Todos los proveedores";
+        string supplierName = "Todas las editoriales";
         if (supplierId.HasValue)
         {
             var pub = await _suppliers.GetByIdAsync(supplierId.Value);
-            supplierName = pub?.Name ?? "Proveedor desconocido";
+            supplierName = pub?.Name ?? "Editorial desconocida";
         }
 
         return await _repository.GetBySupplierAsync(supplierId) with
@@ -31,11 +31,11 @@ public class ReportService : IReportService
 
     public async Task<SalesByProductReportDto> GetSalesByProductAsync(int? supplierId)
     {
-        string supplierName = "Todos los proveedores";
+        string supplierName = "Todas las editoriales";
         if (supplierId.HasValue)
         {
             var pub = await _suppliers.GetByIdAsync(supplierId.Value);
-            supplierName = pub?.Name ?? "Proveedor desconocido";
+            supplierName = pub?.Name ?? "Editorial desconocida";
         }
 
         return await _repository.GetSalesByProductAsync(supplierId) with

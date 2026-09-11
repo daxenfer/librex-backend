@@ -2,6 +2,7 @@ using Librex.Application.DTOs.ReturnNotes;
 using Librex.Application.UseCases.ReturnNotes;
 using Librex.Application.DTOs.Deletion;
 using Librex.Application.UseCases.Deletion;
+using Librex.Domain.Constants;
 using Librex.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -34,6 +35,7 @@ public class ReturnsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = Permissions.ReturnsWrite)]
     public async Task<ActionResult<ReturnNoteDto>> Create([FromBody] CreateReturnNoteDto dto)
     {
         var created = await _service.CreateAsync(dto);
@@ -41,6 +43,7 @@ public class ReturnsController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [Authorize(Policy = Permissions.ReturnsWrite)]
     public async Task<ActionResult<ReturnNoteDto>> Update(int id, [FromBody] UpdateReturnNoteDto dto)
     {
         var updated = await _service.UpdateAsync(id, dto);
@@ -57,6 +60,7 @@ public class ReturnsController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
+    [Authorize(Policy = Permissions.ReturnsDelete)]
     public async Task<IActionResult> Delete(int id)
     {
         var deleted = await _service.DeleteAsync(id);

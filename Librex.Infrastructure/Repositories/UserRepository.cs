@@ -43,6 +43,14 @@ public class UserRepository : IUserRepository
         }
     }
 
+    // A propósito NO filtra por IsActive: el login necesita distinguir "no existe" de "está
+    // dado de baja" para poder registrarlo en la bitácora. Quien llama decide si lo deja pasar.
     public async Task<User?> GetByUsernameAsync(string username)
-        => await _context.Users.FirstOrDefaultAsync(u => u.Username == username && u.IsActive);
+        => await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
+
+    public async Task<bool> UsernameExistsAsync(string username, int? excludeId = null)
+        => await _context.Users.AnyAsync(u => u.Username == username && (excludeId == null || u.Id != excludeId));
+
+    public async Task<int> CountActiveByRoleAsync(string role)
+        => await _context.Users.CountAsync(u => u.Role == role && u.IsActive);
 }

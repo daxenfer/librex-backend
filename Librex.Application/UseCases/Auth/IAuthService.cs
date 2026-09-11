@@ -4,5 +4,5 @@ namespace Librex.Application.UseCases.Auth;
 
 public interface IAuthService
 {
-    Task<LoginResponseDto?> LoginAsync(LoginDto dto);
+    Task<LoginResponseDto?> LoginAsync(LoginDto dto, LoginRequestContext context);
 }

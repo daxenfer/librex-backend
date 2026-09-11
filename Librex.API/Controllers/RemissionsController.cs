@@ -2,6 +2,7 @@ using Librex.Application.DTOs.Remissions;
 using Librex.Application.UseCases.Remissions;
 using Librex.Application.DTOs.Deletion;
 using Librex.Application.UseCases.Deletion;
+using Librex.Domain.Constants;
 using Librex.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -34,6 +35,7 @@ public class RemissionsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = Permissions.RemissionsWrite)]
     public async Task<ActionResult<RemissionDto>> Create([FromBody] CreateRemissionDto dto)
     {
         var created = await _service.CreateAsync(dto);
@@ -41,6 +43,7 @@ public class RemissionsController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [Authorize(Policy = Permissions.RemissionsWrite)]
     public async Task<ActionResult<RemissionDto>> Update(int id, [FromBody] UpdateRemissionDto dto)
     {
         var updated = await _service.UpdateAsync(id, dto);
@@ -57,6 +60,7 @@ public class RemissionsController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
+    [Authorize(Policy = Permissions.RemissionsDelete)]
     public async Task<IActionResult> Delete(int id)
     {
         var deleted = await _service.DeleteAsync(id);

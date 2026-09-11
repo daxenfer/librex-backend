@@ -2,6 +2,7 @@ using Librex.Application.DTOs.Customers;
 using Librex.Application.UseCases.Customers;
 using Librex.Application.DTOs.Deletion;
 using Librex.Application.UseCases.Deletion;
+using Librex.Domain.Constants;
 using Librex.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -34,6 +35,7 @@ public class CustomersController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = Permissions.CustomersWrite)]
     public async Task<ActionResult<CustomerDto>> Create([FromBody] CreateCustomerDto dto)
     {
         var created = await _service.CreateAsync(dto);
@@ -41,6 +43,7 @@ public class CustomersController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [Authorize(Policy = Permissions.CustomersWrite)]
     public async Task<ActionResult<CustomerDto>> Update(int id, [FromBody] UpdateCustomerDto dto)
     {
         var updated = await _service.UpdateAsync(id, dto);
@@ -57,6 +60,7 @@ public class CustomersController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
+    [Authorize(Policy = Permissions.CustomersDelete)]
     public async Task<IActionResult> Delete(int id)
     {
         var deleted = await _service.DeleteAsync(id);

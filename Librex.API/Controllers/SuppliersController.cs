@@ -2,6 +2,7 @@ using Librex.Application.DTOs.Suppliers;
 using Librex.Application.UseCases.Suppliers;
 using Librex.Application.DTOs.Deletion;
 using Librex.Application.UseCases.Deletion;
+using Librex.Domain.Constants;
 using Librex.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -34,6 +35,7 @@ public class SuppliersController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = Permissions.SuppliersWrite)]
     public async Task<ActionResult<SupplierDto>> Create([FromBody] CreateSupplierDto dto)
     {
         var created = await _service.CreateAsync(dto);
@@ -41,6 +43,7 @@ public class SuppliersController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [Authorize(Policy = Permissions.SuppliersWrite)]
     public async Task<ActionResult<SupplierDto>> Update(int id, [FromBody] UpdateSupplierDto dto)
     {
         var updated = await _service.UpdateAsync(id, dto);
@@ -57,6 +60,7 @@ public class SuppliersController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
+    [Authorize(Policy = Permissions.SuppliersDelete)]
     public async Task<IActionResult> Delete(int id)
     {
         var deleted = await _service.DeleteAsync(id);

@@ -1,5 +1,6 @@
 using Librex.Application.DTOs.Settings;
 using Librex.Application.UseCases.Settings;
+using Librex.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -22,6 +23,7 @@ public class SettingsController : ControllerBase
         => Ok(await _service.GetAsync());
 
     [HttpPut]
+    [Authorize(Policy = Permissions.SettingsManage)]
     public async Task<ActionResult<CompanySettingsDto>> Update([FromBody] UpdateCompanySettingsDto dto)
         => Ok(await _service.UpdateAsync(dto));
 }

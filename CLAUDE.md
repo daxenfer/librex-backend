@@ -25,6 +25,55 @@ Librex.Tests/          → Unit tests (xUnit + Moq + EF InMemory)
 - DTOs para todas las respuestas API (nunca exponer entidades de dominio)
 - Entities llevan campo `TenantId` para compatibilidad multi-tenant futura
 
+## Autorización
+- Roles en `Librex.Domain/Constants/Roles.cs`: `SuperAdmin` (proveedor del sistema, único con
+  `users.manage`), `Administrator` (dueño del negocio), `User` (operativo, sin borrar).
+- `Librex.Domain/Constants/Permissions.cs` es la **fuente única** de la matriz rol → permisos. De
+  ahí salen las policies de `Program.cs`, los claims `perm` que emite `AuthService.BuildToken` y la
+  lista que el login devuelve en `LoginResponseDto.Permissions`.
+- El nombre del permiso **es** el nombre de la policy — no hay tabla de traducción:
+  `[Authorize(Policy = Permissions.ProductsDelete)]`. `Program.cs` registra una policy por permiso
+  recorriendo la matriz.
+- `[Authorize]` a nivel de clase cubre los GET (leer no lleva permiso); el permiso va en la acción,
+  solo en POST/PUT/DELETE.
+- Al agregar un módulo: constantes nuevas en `Permissions.cs` y atributos en el controlador. Nada
+  más — ni `Program.cs` ni el frontend se tocan.
+- `api/users` es solo de `SuperAdmin`. Sus reglas de guarda (anti-escalada de privilegios, no
+  modificarse a sí mismo, no dejar el sistema sin un SuperAdmin activo) están en `UserService`, no
+  en el controlador.
+- Un rol desconocido en la BD se queda **sin permisos**, nunca con los de administrador.
+
+## Seguridad de acceso
+Configuración **obligatoria** fuera de desarrollo (variables de entorno; el `__` es el separador
+de secciones de .NET). Ninguna vive ya en `appsettings.json`, que está versionado:
+```
+Jwt__Key                  clave de firma, mínimo 32 caracteres — sin ella la API no arranca
+ConnectionStrings__Default cadena de conexión de Postgres
+Seed__AdminPassword       opcional: contraseña del usuario semilla en una instalación nueva
+Swagger__Enabled          opcional: true para publicar Swagger fuera de desarrollo
+```
+En local van en `dotnet user-secrets` (`--project Librex.API`), no en archivos.
+
+Capas contra fuerza bruta, cada una tapa lo que la otra no ve:
+- **Bloqueo por cuenta** (`LockoutPolicy`): 10 intentos fallidos consecutivos bloquean 15 minutos.
+  Es temporal a propósito — con bloqueo permanente, cualquiera dejaría al dueño fuera del sistema
+  con diez intentos malos. Restablecer la contraseña también levanta el bloqueo.
+- **Límite por IP** (`RateLimitPolicies.Login`): 20 peticiones por minuto, solo sobre el login.
+  Frena a quien barre muchas cuentas desde una misma IP, que el bloqueo por cuenta no detecta.
+- **Bitácora** (`login_attempts`): todo intento queda registrado con su motivo real. Al usuario
+  siempre se le responde lo mismo — decirle "cuenta bloqueada" confirmaría que esa cuenta existe.
+- **Tiempo constante**: el login verifica un hash aunque el usuario no exista, para que el tiempo
+  de respuesta no delate qué nombres están dados de alta.
+
+**Revocación de sesiones** (`User.SecurityStamp`): el sello viaja en el token y se compara contra
+la base en cada petición (`OnTokenValidated` en `Program.cs`). Cambia al dar de baja al usuario,
+cambiarle el rol, el nombre de usuario o la contraseña — y entonces sus tokens dejan de valer al
+instante. Sin esto, un JWT es válido hasta expirar aunque el usuario ya no exista. Cuesta una
+consulta por petición, que es el precio de que "desactivar usuario" signifique algo.
+
+**Contraseñas** (`StrongPasswordAttribute`): mínimo 10 caracteres con mayúscula, minúscula, número
+y símbolo. Hash con BCrypt, nunca en claro ni reversible.
+
 ## Convenciones de código
 - **Todo el código en inglés**: clases, métodos, propiedades, variables, comentarios, DTOs
   - Razón: el token `[controller]` de ASP.NET Core solo elimina el sufijo inglés "Controller".
@@ -56,7 +105,7 @@ dotnet user-secrets set "Jwt:Key" "tu-clave-secreta" --project Librex.API
 - Nunca mockear DbContext directamente — usar InMemory provider y DbContext real
 
 ## Lo que NO hacer
-- No commit de connection strings con credenciales reales
+- No commit de connection strings, claves JWT ni contraseñas — van en user-secrets o variables de entorno
 - No usar `appsettings.Development.json` con contraseñas — usar `dotnet user-secrets`
 - Sin lógica de negocio en Controllers o Infrastructure
 - No saltarse migraciones de EF
