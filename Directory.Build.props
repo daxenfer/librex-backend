@@ -3,7 +3,7 @@
   <!-- Lo que los cinco proyectos comparten. Vive aquí para que cambiar de versión de .NET
        sea una sola edición y no cinco, y para que ningún proyecto se quede atrás. -->
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
