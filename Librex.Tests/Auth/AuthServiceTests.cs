@@ -5,6 +5,7 @@ using Librex.Domain.Entities;
 using Librex.Domain.Enums;
 using Librex.Domain.Interfaces;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 
 namespace Librex.Tests.Auth;
@@ -14,6 +15,9 @@ public class AuthServiceTests
     private readonly Mock<IUserRepository> _userRepo = new();
     private readonly Mock<ILoginAttemptRepository> _attemptRepo = new();
     private readonly IConfiguration _config;
+
+    // Reloj fijo: la ventana de bloqueo se adelanta con _clock.Advance en vez de esperarla.
+    private readonly FakeTimeProvider _clock = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
     private readonly AuthService _sut;
 
     private static readonly LoginRequestContext Context = new("127.0.0.1", "pruebas");
@@ -30,7 +34,7 @@ public class AuthServiceTests
             })
             .Build();
 
-        _sut = new AuthService(_userRepo.Object, _attemptRepo.Object, _config);
+        _sut = new AuthService(_userRepo.Object, _attemptRepo.Object, _config, _clock);
     }
 
     private static User Existing(string username, string password, bool active = true) => new()
@@ -58,7 +62,8 @@ public class AuthServiceTests
         Assert.Equal("System Administrator", result.FullName);
         Assert.Equal(Roles.Administrator, result.Role);
         Assert.False(string.IsNullOrEmpty(result.Token));
-        Assert.True(result.ExpiresAt > DateTime.UtcNow);
+        // Jwt:ExpirationMinutes es 60 en la configuración de estas pruebas.
+        Assert.Equal(_clock.GetUtcNow().UtcDateTime.AddMinutes(60), result.ExpiresAt);
     }
 
     [Fact]
@@ -129,8 +134,7 @@ public class AuthServiceTests
         for (var i = 0; i < LockoutPolicy.MaxFailedAttempts; i++)
             await LoginAsync("admin", "mala");
 
-        Assert.NotNull(user.LockedOutUntil);
-        Assert.True(user.LockedOutUntil > DateTime.UtcNow);
+        Assert.Equal(_clock.GetUtcNow().UtcDateTime.Add(LockoutPolicy.LockoutDuration), user.LockedOutUntil);
         Assert.Equal(0, user.FailedLoginAttempts);   // el bloqueo sustituye al contador
     }
 
@@ -139,7 +143,7 @@ public class AuthServiceTests
     public async Task LoginAsync_WhileLockedOut_RejectsEvenTheRightPassword()
     {
         var user = Existing("admin", "Admin1234");
-        user.LockedOutUntil = DateTime.UtcNow.AddMinutes(5);
+        user.LockedOutUntil = _clock.GetUtcNow().UtcDateTime.AddMinutes(5);
         _userRepo.Setup(r => r.GetByUsernameAsync("admin")).ReturnsAsync(user);
 
         Assert.Null(await LoginAsync("admin", "Admin1234"));
@@ -147,13 +151,18 @@ public class AuthServiceTests
     }
 
     // El bloqueo es temporal: pasada la ventana se puede volver a entrar sin intervención.
+    // Con el reloj falso se comprueba adelantándolo de verdad, no fingiendo una fecha pasada.
     [Fact]
     public async Task LoginAsync_AfterLockoutExpires_LetsTheUserBackIn()
     {
         var user = Existing("admin", "Admin1234");
-        user.LockedOutUntil = DateTime.UtcNow.AddMinutes(-1);
+        user.LockedOutUntil = _clock.GetUtcNow().UtcDateTime.Add(LockoutPolicy.LockoutDuration);
         user.FailedLoginAttempts = 4;
         _userRepo.Setup(r => r.GetByUsernameAsync("admin")).ReturnsAsync(user);
+
+        Assert.Null(await LoginAsync("admin", "Admin1234"));   // todavía dentro de la ventana
+
+        _clock.Advance(LockoutPolicy.LockoutDuration + TimeSpan.FromSeconds(1));
 
         Assert.NotNull(await LoginAsync("admin", "Admin1234"));
         Assert.Null(user.LockedOutUntil);
@@ -210,9 +219,12 @@ public class AuthServiceTests
     {
         _userRepo.Setup(r => r.GetByUsernameAsync(It.IsAny<string>())).ReturnsAsync((User?)null);
 
-        var started = DateTime.UtcNow;
+        // Stopwatch y no DateTime.UtcNow: en Windows el reloj de pared salta de ~15 ms en ~15 ms,
+        // así que un umbral de 5 ms medido con él da falsos negativos. Y no puede ser el reloj
+        // falso: lo que se mide aquí es tiempo real de CPU, no tiempo del dominio.
+        var started = System.Diagnostics.Stopwatch.StartNew();
         await LoginAsync("ghost", "loquesea");
 
-        Assert.True(DateTime.UtcNow - started > TimeSpan.FromMilliseconds(5));
+        Assert.True(started.Elapsed > TimeSpan.FromMilliseconds(5), $"tardó {started.ElapsedMilliseconds} ms");
     }
 }

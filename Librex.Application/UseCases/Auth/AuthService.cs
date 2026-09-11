@@ -13,15 +13,14 @@ namespace Librex.Application.UseCases.Auth;
 
 public sealed class AuthService(IUserRepository userRepository,
         ILoginAttemptRepository attemptRepository,
-        IConfiguration configuration) : IAuthService
+        IConfiguration configuration,
+        TimeProvider clock) : IAuthService
 {
     // Hash de una contraseña que nadie tiene. Se verifica contra él cuando el usuario no existe,
     // para que la respuesta tarde lo mismo que un intento contra una cuenta real: si solo se
     // ejecutara BCrypt en el caso "el usuario existe", el tiempo de respuesta delataría qué
     // nombres están dados de alta, que es la mitad del trabajo de quien ataca.
     private const string DummyHash = "$2a$11$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
-
-
 
     // Devuelve null en todos los casos de fallo, sin distinguirlos: al usuario se le responde
     // siempre lo mismo. Decirle "cuenta bloqueada" o "ese usuario no existe" le confirmaría a
@@ -42,7 +41,7 @@ public sealed class AuthService(IUserRepository userRepository,
 
         // El bloqueo se revisa antes que la contraseña: mientras dura, ni la correcta entra. Eso
         // es lo que obliga al ataque a esperar en vez de seguir probando.
-        if (user.LockedOutUntil is { } until && until > DateTime.UtcNow)
+        if (user.LockedOutUntil is { } until && until > clock.GetUtcNow().UtcDateTime)
             return await RejectAsync(username, LoginOutcome.LockedOut, context);
 
         if (!passwordMatches)
@@ -51,7 +50,7 @@ public sealed class AuthService(IUserRepository userRepository,
 
             if (user.FailedLoginAttempts >= LockoutPolicy.MaxFailedAttempts)
             {
-                user.LockedOutUntil = DateTime.UtcNow.Add(LockoutPolicy.LockoutDuration);
+                user.LockedOutUntil = clock.GetUtcNow().UtcDateTime.Add(LockoutPolicy.LockoutDuration);
                 user.FailedLoginAttempts = 0;   // el bloqueo sustituye al contador
             }
 
@@ -111,7 +110,7 @@ public sealed class AuthService(IUserRepository userRepository,
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-        var expiresAt = DateTime.UtcNow.AddMinutes(expirationMinutes);
+        var expiresAt = clock.GetUtcNow().UtcDateTime.AddMinutes(expirationMinutes);
 
         // Los permisos se resuelven aquí, una sola vez, y viajan firmados dentro del token. Las
         // policies de Program.cs los leen de estos claims; el frontend recibe la misma lista en

@@ -16,7 +16,7 @@ public static class DatabaseInitializer
     // o con la variable de entorno Seed__AdminPassword.
     private const string DefaultSeedPassword = "Admin1234!*";
 
-    public static async Task SeedAsync(LibrexDbContext context, string? adminPassword = null)
+    public static async Task SeedAsync(LibrexDbContext context, TimeProvider clock, string? adminPassword = null)
     {
         await context.Database.MigrateAsync();
 
@@ -30,7 +30,7 @@ public static class DatabaseInitializer
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
                 FullName = "System Administrator",
                 Role = Roles.SuperAdmin,
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = clock.GetUtcNow().UtcDateTime,
                 IsActive = true,
             });
             await context.SaveChangesAsync();
@@ -46,7 +46,7 @@ public static class DatabaseInitializer
             if (seedUser is not null)
             {
                 seedUser.Role = Roles.SuperAdmin;
-                seedUser.ModifiedAt = DateTime.UtcNow;
+                seedUser.ModifiedAt = clock.GetUtcNow().UtcDateTime;
                 await context.SaveChangesAsync();
             }
         }

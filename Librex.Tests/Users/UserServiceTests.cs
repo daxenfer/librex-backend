@@ -4,6 +4,7 @@ using Librex.Domain.Constants;
 using Librex.Domain.Entities;
 using Librex.Domain.Exceptions;
 using Librex.Domain.Interfaces;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 
 namespace Librex.Tests.Users;
@@ -22,7 +23,7 @@ public class UserServiceTests
     public UserServiceTests()
     {
         _repo.Setup(r => r.AddAsync(It.IsAny<User>())).ReturnsAsync((User u) => u);
-        _sut = new UserService(_repo.Object);
+        _sut = new UserService(_repo.Object, new FakeTimeProvider());
     }
 
     private static User Existing(int id, string role, string username = "someone") => new()

@@ -8,7 +8,7 @@ namespace Librex.Application.UseCases.Users;
 
 // Alta, baja y cambios de usuarios. Todas las reglas de guarda viven aquí y no en el controlador:
 // son de negocio, y el frontend solo las refleja deshabilitando botones.
-public sealed class UserService(IUserRepository repository) : IUserService
+public sealed class UserService(IUserRepository repository, TimeProvider clock) : IUserService
 {
     public async Task<IEnumerable<UserDto>> GetAllAsync()
         => (await repository.GetAllAsync()).Select(MapToDto);
@@ -82,7 +82,7 @@ public sealed class UserService(IUserRepository repository) : IUserService
         user.Username = username;
         user.FullName = dto.FullName.Trim();
         user.Role = role;
-        user.ModifiedAt = DateTime.UtcNow;
+        user.ModifiedAt = clock.GetUtcNow().UtcDateTime;
         if (identityChanged) user.SecurityStamp = Guid.NewGuid().ToString("N");
 
         await repository.UpdateAsync(user);
@@ -97,7 +97,7 @@ public sealed class UserService(IUserRepository repository) : IUserService
         EnsureCanTouch(user, actor);
 
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
-        user.ModifiedAt = DateTime.UtcNow;
+        user.ModifiedAt = clock.GetUtcNow().UtcDateTime;
 
         // Cambiar la contraseña cierra las sesiones abiertas de esa cuenta. Es el caso que más
         // importa: si se restablece porque alguien la tenía, el token robado deja de servir.

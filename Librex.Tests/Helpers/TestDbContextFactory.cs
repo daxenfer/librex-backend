@@ -13,6 +13,6 @@ internal static class TestDbContextFactory
             .UseInMemoryDatabase($"librex-test-{Guid.NewGuid()}")
             .Options;
 
-        return new LibrexDbContext(options);
+        return new LibrexDbContext(options, TimeProvider.System);
     }
 }

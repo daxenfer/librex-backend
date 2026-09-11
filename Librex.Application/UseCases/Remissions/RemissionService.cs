@@ -25,6 +25,14 @@ public sealed class RemissionService(IRemissionRepository repository) : IRemissi
             CustomerId = dto.CustomerId,
             // Postgres guarda la columna como timestamptz y Npgsql exige Kind=Utc; se re-etiqueta
             // la hora local (sin convertirla) para que se guarde el valor de reloj tal cual, no UTC.
+            //
+            // PENDIENTE: "la hora local" es la del servidor, no la del negocio. En la máquina de
+            // desarrollo eso es Monterrey y sale bien; desplegado en un servidor que corra en UTC,
+            // la fecha de la remisión queda seis horas adelantada. Arreglarlo es decidir de dónde
+            // sale la fecha —del cliente, o fijada a America/Monterrey— y eso cambia el
+            // comportamiento del negocio, así que no entra en la migración. Por eso este servicio
+            // todavía no recibe TimeProvider: no tiene caso inyectar el reloj sin resolver antes
+            // cuál es la zona correcta.
             Date = DateTime.SpecifyKind(DateTime.Now, DateTimeKind.Utc),
             SalesPerson = dto.SalesPerson,
             Notes = dto.Notes,

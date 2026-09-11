@@ -3,10 +3,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Librex.Infrastructure.Data;
 
-public class LibrexDbContext : DbContext
+public class LibrexDbContext(DbContextOptions<LibrexDbContext> options, TimeProvider clock)
+    : DbContext(options)
 {
-    public LibrexDbContext(DbContextOptions<LibrexDbContext> options) : base(options) { }
-
     public DbSet<Product> Products => Set<Product>();
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Supplier> Suppliers => Set<Supplier>();
@@ -32,7 +31,7 @@ public class LibrexDbContext : DbContext
         foreach (var entry in ChangeTracker.Entries<BaseEntity>()
             .Where(e => e.State == EntityState.Modified))
         {
-            entry.Entity.ModifiedAt = DateTime.UtcNow;
+            entry.Entity.ModifiedAt = clock.GetUtcNow().UtcDateTime;
         }
         return base.SaveChangesAsync(cancellationToken);
     }

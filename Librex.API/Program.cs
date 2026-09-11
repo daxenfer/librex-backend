@@ -28,6 +28,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
+// El reloj se inyecta en vez de leerse de DateTime.UtcNow: así la ventana de bloqueo del login
+// se puede adelantar en una prueba sin esperar quince minutos de verdad.
+builder.Services.AddSingleton(TimeProvider.System);
+
 builder.Services.AddDbContext<LibrexDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
 
@@ -172,7 +176,8 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<LibrexDbContext>();
-    await DatabaseInitializer.SeedAsync(context, builder.Configuration["Seed:AdminPassword"]);
+    var clock = scope.ServiceProvider.GetRequiredService<TimeProvider>();
+    await DatabaseInitializer.SeedAsync(context, clock, builder.Configuration["Seed:AdminPassword"]);
 }
 
 // La documentación publica el mapa completo de la API, incluidos los endpoints de usuarios.
@@ -202,7 +207,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-app.MapGet("/api/health", () => Results.Ok(new { status = "ok", timestamp = DateTime.UtcNow }))
+app.MapGet("/api/health", (TimeProvider clock) =>
+       Results.Ok(new { status = "ok", timestamp = clock.GetUtcNow().UtcDateTime }))
    .WithTags("System");
 
 app.Run();
