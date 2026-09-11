@@ -2,9 +2,11 @@
 
 ## Contexto del sistema
 
-Librex es un sistema de gestión para una distribuidora de libros. Proveedores son editoriales; clientes son distribuidores, maestros y escuelas (principalmente de gobierno). El sistema está diseñado para iniciar como mono-tenant con posibilidad de evolucionar a multi-tenant (SaaS).
+Librex es un sistema de gestión para una distribuidora de libros. Los proveedores son editoriales;
+los clientes son distribuidores, maestros y escuelas (principalmente de gobierno).
 
-**MVP incluye:** Punto de Venta, Clientes, Productos, Órdenes de Compra, Devoluciones, Reportes de Ventas.
+**Módulos en producción:** Productos, Proveedores, Clientes, Remisiones, Devoluciones, Pagos,
+Cuentas por cobrar, Reportes, Configuración y Usuarios.
 
 ---
 
@@ -12,13 +14,12 @@ Librex es un sistema de gestión para una distribuidora de libros. Proveedores s
 
 | Capa | Tecnología | Versión |
 |------|-----------|---------|
-| Backend | .NET Web API | 9.0 |
-| ORM | Entity Framework Core + Npgsql | 9.x |
-| Base de datos | PostgreSQL | 16 |
-| Frontend | A definir (React recomendado) | — |
-| Reverse proxy | Nginx | — |
-| Contenedores | Docker + Docker Compose | — |
-| Cloud | AWS EC2 (Linux) | — |
+| Backend | .NET Web API | 10.0 (LTS hasta noviembre de 2028) |
+| ORM | Entity Framework Core + Npgsql | 10.x |
+| Base de datos | PostgreSQL | 16 (local: puerto 5433, base `librex_dev`) |
+| Frontend | React + Vite + TypeScript (repo `librex-frontend`) | React 19 |
+| Documentación de la API | OpenAPI 3.1 nativo + Scalar | `/scalar` |
+| Despliegue | Kubiy (`api.librex.apps2.kubiy.site`) | — |
 
 ---
 
@@ -26,63 +27,90 @@ Librex es un sistema de gestión para una distribuidora de libros. Proveedores s
 
 ```
 Librex.Domain/
-  ├── Entities/          → Clases de dominio (Product, Customer, Order, etc.)
-  ├── Interfaces/        → Contratos de repositorios (IProductRepository, etc.)
-  └── Enums/             → Enumeradores del dominio
+  ├── Entities/          → Clases de dominio y BaseEntity
+  ├── Interfaces/        → Contratos de repositorio (IRepository<T> y los específicos)
+  ├── Constants/         → Roles, Permissions, LockoutPolicy, SecurityClaims
+  ├── Enums/             → DeletableEntity, DependentKind, LoginOutcome
+  └── Exceptions/        → BusinessRuleException
 
 Librex.Application/
-  ├── UseCases/          → Lógica de negocio por módulo
-  ├── DTOs/              → Request/Response objects
-  └── Interfaces/        → Contratos de servicios de aplicación
+  ├── UseCases/<Área>/   → Un Service + su IService por módulo
+  ├── DTOs/<Área>/       → Request/Response, todos `record`
+  └── Validation/        → StrongPasswordAttribute
 
 Librex.Infrastructure/
-  ├── Data/              → LibrexDbContext, configuraciones de entidades
-  ├── Repositories/      → Implementaciones de interfaces del dominio
-  └── Migrations/        → Migraciones de EF Core
+  ├── Data/              → LibrexDbContext, Configurations/, Migrations/,
+  │                        DeletionGraph, DatabaseInitializer, DatabaseErrors
+  └── Repositories/      → Repository<T>, DocumentRepository<T> y los concretos
 
 Librex.API/
-  ├── Controllers/       → Endpoints HTTP por módulo
-  ├── Middleware/        → Error handling, auth, logging
-  └── Extensions/        → DI registration helpers
+  ├── Controllers/       → Endpoints HTTP por módulo, ruta `api/<área>` explícita
+  ├── Middleware/        → ErrorLoggingMiddleware
+  ├── OpenApi/           → BearerSecuritySchemeTransformer
+  ├── Security/          → RateLimitPolicies
+  └── Program.cs         → DI, JWT, policies, CORS, rate limiting
 ```
 
 **Flujo de dependencias:** API → Application → Domain ← Infrastructure
+
+La configuración compartida de los cinco proyectos vive en `Directory.Build.props` y
+`Directory.Packages.props`, en la raíz.
 
 ---
 
 ## Decisiones de diseño
 
-### Multi-tenant preparado
-Todas las entidades principales incluirán `TenantId` desde el inicio, aunque la primera versión sea mono-tenant. Esto evita una migración costosa si se decide convertir a SaaS.
-
-### No RDS en primera fase
-PostgreSQL se aloja en la misma EC2 para reducir costo (~$15-25/mes de ahorro). Migrar a RDS es una operación de pocas horas cuando el volumen lo justifique.
-
 ### DTOs obligatorios
-Nunca se exponen entidades de dominio directamente en la API. Todos los endpoints usan DTOs en request y response. Razón: protege el dominio de cambios de contrato y evita over-posting.
+Nunca se exponen entidades de dominio en la API. Protege el dominio de cambios de contrato y
+evita over-posting.
+
+### Borrado lógico en cascada
+Nada se destruye. Al eliminar una entidad raíz, ella y sus dependientes se marcan como inactivos
+en un solo `SaveChangesAsync`. El grafo de dependientes lo resuelve
+`Librex.Infrastructure/Data/DeletionGraph.cs`, que sirve tanto para la previsualización de
+impacto como para el borrado real. Los documentos ya emitidos que citan un registro eliminado
+conservan su historia intacta: por eso un reporte o un PDF de hace seis meses sigue cuadrando.
+
+Los folios de documentos eliminados quedan quemados y no se reutilizan, para no chocar con el
+índice único de `FolioNumber`.
+
+### Autorización por permiso, no por rol
+`Librex.Domain/Constants/Permissions.cs` es la fuente única de la matriz rol → permisos. De ahí
+salen las policies de `Program.cs`, los claims `perm` del token y la lista que el login devuelve.
+El nombre del permiso **es** el nombre de la policy. El frontend nunca razona por rol.
+
+### Revocación de sesiones
+`User.SecurityStamp` viaja en el token y se compara contra la base en cada petición. Cuesta una
+consulta por petición, a cambio de que dar de baja a un usuario surta efecto al instante en vez
+de hasta que expire su token.
+
+### Multi-tenant: planeado y no hecho
+Se consideró llevar `TenantId` en todas las entidades desde el inicio. **No se implementó**: no
+existe en el código. Si algún día se retoma, es una migración de datos de verdad.
 
 ---
 
-## Infraestructura en AWS (bajo costo)
+## Modelo de dominio
 
-```
-Internet → Elastic IP → EC2 (t3.micro / t4g.small, Amazon Linux 2023)
-                             ├── Nginx (puerto 80/443, SSL Let's Encrypt)
-                             ├── Librex API (.NET 9, systemd, puerto 5000)
-                             └── PostgreSQL 16 (local, puerto 5432)
-```
+| Entidad | Notas |
+|---|---|
+| `Customer` | Cliente. |
+| `Supplier` | Editorial. En la UI se llama "Editorial"; en el código, `Supplier`. |
+| `Product` | Título. Pertenece a un `Supplier`. |
+| `Remission` + `RemissionDetail` | Funciona como factura. `Discount` es **monto fijo**, no porcentaje. |
+| `ReturnNote` + `ReturnNoteDetail` | Devolución. Puede ir ligada a una remisión o suelta; si es suelta, el motivo es obligatorio. |
+| `Payment` + `PaymentAllocation` | Un pago se reparte entre remisiones. El remanente sin asignar es un anticipo. |
+| `CompanySettings` | Datos de la empresa (incluido el logo) para los PDFs. |
+| `User`, `LoginAttempt` | Usuarios y bitácora de accesos. |
+| `ErrorLog` | Errores no controlados, persistidos por el middleware. |
 
-**Costo estimado inicial:** $8-15 USD/mes (t3.micro Free Tier si aplica).
+**Cuentas por cobrar**, por remisión: `saldo = total − Σ devoluciones − Σ asignaciones de pago`.
 
 ---
 
-## Módulos del MVP
+## Historial
 
-| Módulo | Entidades principales |
-|--------|-----------------------|
-| Productos | Product, Category, Publisher (editorial) |
-| Clientes | Customer, CustomerType |
-| Punto de Venta | Sale, SaleItem, Payment |
-| Órdenes de Compra | PurchaseOrder, PurchaseOrderItem |
-| Devoluciones | Return, ReturnItem |
-| Reportes | Vistas/queries de lectura, sin entidades propias |
+El backend se migró de .NET 9 a .NET 10 en septiembre de 2026, junto con una limpieza:
+configuración centralizada, analizadores con `TreatWarningsAsErrors`, `Repository<T>` base,
+`TimeProvider`, `CancellationToken` de punta a punta, y el reemplazo de Swashbuckle por OpenAPI
+nativo con Scalar.

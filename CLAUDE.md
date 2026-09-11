@@ -4,8 +4,8 @@
 Sistema de distribución de libros — servicio backend. Módulos: Productos, Editoriales, Clientes, Remisiones, Devoluciones, Pagos, Reportes.
 
 ## Stack
-- .NET 9 Web API (Clean Architecture liviana)
-- ORM: Entity Framework Core 9 + Npgsql 9
+- .NET 10 Web API (Clean Architecture liviana) — LTS hasta noviembre de 2028
+- ORM: Entity Framework Core 10 + Npgsql 10
 - Auth: JWT Bearer tokens
 - DB: PostgreSQL 16 (instalado nativamente en Windows, puerto 5433, base `librex_dev`, usuario `daniel`)
 
@@ -22,8 +22,16 @@ Librex.Tests/          → Unit tests (xUnit + Moq + EF InMemory)
 - Controllers solo reciben y devuelven HTTP — delegan todo a Application
 - Lógica de negocio solo en Domain y Application
 - Infrastructure no expone EF directamente — solo a través de interfaces definidas en Application
-- DTOs para todas las respuestas API (nunca exponer entidades de dominio)
-- Entities llevan campo `TenantId` para compatibilidad multi-tenant futura
+- DTOs para todas las respuestas API (nunca exponer entidades de dominio). Son `record`.
+- Los repositorios heredan de `Repository<T>` (`Librex.Infrastructure/Repositories/Repository.cs`),
+  que implementa las cinco operaciones de `IRepository<T>`. Un repositorio concreto solo declara
+  su `DeletionRoot` y sobrescribe lo que de verdad cambia: qué `Include` lleva y con qué orden
+  lista. Los que llevan folio heredan de `DocumentRepository<T>`.
+- Toda firma async recibe `CancellationToken`, desde la acción del controlador hasta EF.
+- El reloj se inyecta con `TimeProvider`, no se lee de `DateTime.UtcNow`.
+
+> Multi-tenant: se planeó un campo `TenantId` en todas las entidades y **nunca se implementó**.
+> No existe en el código. Si algún día se retoma, es una migración de verdad, no un pendiente.
 
 ## Autorización
 - Roles en `Librex.Domain/Constants/Roles.cs`: `SuperAdmin` (proveedor del sistema, único con
@@ -50,7 +58,7 @@ de secciones de .NET). Ninguna vive ya en `appsettings.json`, que está versiona
 Jwt__Key                  clave de firma, mínimo 32 caracteres — sin ella la API no arranca
 ConnectionStrings__Default cadena de conexión de Postgres
 Seed__AdminPassword       opcional: contraseña del usuario semilla en una instalación nueva
-Swagger__Enabled          opcional: true para publicar Swagger fuera de desarrollo
+ApiDocs__Enabled          opcional: true para publicar la documentación fuera de desarrollo
 ```
 En local van en `dotnet user-secrets` (`--project Librex.API`), no en archivos.
 
@@ -90,6 +98,7 @@ y símbolo. Hash con BCrypt, nunca en claro ni reversible.
 ```powershell
 # Desde la carpeta backend/ (donde está Librex.sln)
 dotnet run --project Librex.API --configuration Release        # inicia API (puerto 5176)
+                                                               # documentación en /scalar
 dotnet build --configuration Release                           # compilar
 dotnet test                                                    # ejecutar tests
 
@@ -98,6 +107,15 @@ dotnet ef database update --project Librex.Infrastructure --startup-project Libr
 
 dotnet user-secrets set "Jwt:Key" "tu-clave-secreta" --project Librex.API
 ```
+
+## Configuración de los proyectos
+- `Directory.Build.props` tiene lo común a los cinco: `TargetFramework`, `Nullable`,
+  `ImplicitUsings` y los analizadores. **Cambiar de versión de .NET se hace ahí, en una línea.**
+- `Directory.Packages.props` fija la versión de cada paquete una sola vez (Central Package
+  Management). Los `.csproj` dicen qué paquete usan, nunca en qué versión.
+- `global.json` fija la banda del SDK en 10.0.4xx.
+- El build corre con `TreatWarningsAsErrors`: está en cero advertencias y hay que mantenerlo ahí.
+  Las tres reglas apagadas están en `.editorconfig`, cada una con su razón escrita.
 
 ## Tests
 - Sin Docker — usar `Microsoft.EntityFrameworkCore.InMemory`
@@ -112,3 +130,5 @@ dotnet user-secrets set "Jwt:Key" "tu-clave-secreta" --project Librex.API
 - No exponer entidades de dominio directamente en la API
 - No usar `dotnet build` sin `--configuration Release` cuando VS Code C# extension está abierta (bloquea DLLs Debug)
 - No usar token `[controller]` en rutas — siempre usar `[Route("api/...")]` explícito
+- No poner `Version=` en un `PackageReference` — la versión va en `Directory.Packages.props`
+- No apagar una advertencia sin escribir por qué en `.editorconfig`
