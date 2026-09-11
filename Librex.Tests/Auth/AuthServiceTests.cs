@@ -101,8 +101,7 @@ public class AuthServiceTests
         var result = await LoginAsync("testuser", "Pass123");
 
         Assert.NotNull(result);
-        var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
-        var token = handler.ReadJwtToken(result.Token);
+        var token = new Microsoft.IdentityModel.JsonWebTokens.JsonWebToken(result.Token);
         Assert.Equal("testuser", token.Claims.First(c => c.Type == "unique_name").Value);
         Assert.Equal(Roles.User, token.Claims.First(c => c.Type == System.Security.Claims.ClaimTypes.Role).Value);
 

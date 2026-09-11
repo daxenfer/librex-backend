@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Librex.Application.DTOs.Auth;
@@ -8,6 +7,7 @@ using Librex.Domain.Entities;
 using Librex.Domain.Enums;
 using Librex.Domain.Interfaces;
 using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Librex.Application.UseCases.Auth;
@@ -149,16 +149,27 @@ public sealed class AuthService(IUserRepository userRepository,
         ];
         claims.AddRange(permissions.Select(p => new Claim(Permissions.ClaimType, p)));
 
-        var token = new JwtSecurityToken(
-            issuer: issuer,
-            audience: audience,
-            claims: claims,
-            expires: expiresAt,
-            signingCredentials: credentials);
+        // JsonWebTokenHandler y no JwtSecurityTokenHandler: el segundo es la API vieja y obliga a
+        // arrastrar el paquete System.IdentityModel.Tokens.Jwt. El handler nuevo ya viene con
+        // Microsoft.IdentityModel.Tokens, que se usa de todos modos para firmar.
+        //
+        // SetDefaultTimesOnTokenCreation se apaga a propósito: por omisión el handler agregaría
+        // iat y nbf, que el token no traía. nbf con ClockSkew en cero es justo la combinación que
+        // rechaza un token recién emitido si el reloj del validador va un pelo atrasado. El
+        // objetivo de este cambio es quitar un paquete, no alterar el token.
+        var handler = new JsonWebTokenHandler { SetDefaultTimesOnTokenCreation = false };
+        var token = handler.CreateToken(new SecurityTokenDescriptor
+        {
+            Issuer = issuer,
+            Audience = audience,
+            Expires = expiresAt,
+            SigningCredentials = credentials,
+            Subject = new ClaimsIdentity(claims),
+        });
 
         return new LoginResponseDto
         {
-            Token = new JwtSecurityTokenHandler().WriteToken(token),
+            Token = token,
             Username = user.Username,
             FullName = user.FullName,
             Role = user.Role,
