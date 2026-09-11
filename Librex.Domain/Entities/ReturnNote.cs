@@ -1,6 +1,6 @@
 namespace Librex.Domain.Entities;
 
-public class ReturnNote : BaseEntity
+public class ReturnNote : BaseEntity, IFolioEntity
 {
     public int FolioNumber { get; set; }
     public int CustomerId { get; set; }

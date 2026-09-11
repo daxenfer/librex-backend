@@ -1,6 +1,6 @@
 namespace Librex.Domain.Entities;
 
-public class Payment : BaseEntity
+public class Payment : BaseEntity, IFolioEntity
 {
     public int FolioNumber { get; set; }
     public int CustomerId { get; set; }

@@ -1,6 +1,6 @@
 namespace Librex.Domain.Entities;
 
-public class Remission : BaseEntity
+public class Remission : BaseEntity, IFolioEntity
 {
     public int FolioNumber { get; set; }
     public int CustomerId { get; set; }

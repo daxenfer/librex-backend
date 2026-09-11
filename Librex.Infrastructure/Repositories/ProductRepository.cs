@@ -6,51 +6,28 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Librex.Infrastructure.Repositories;
 
-public class ProductRepository : IProductRepository
+public sealed class ProductRepository(LibrexDbContext context)
+    : Repository<Product>(context), IProductRepository
 {
-    private readonly LibrexDbContext _context;
+    protected override DeletableEntity? DeletionRoot => DeletableEntity.Product;
 
-    public ProductRepository(LibrexDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<Product?> GetByIdAsync(int id)
-        => await _context.Products
+    public override async Task<Product?> GetByIdAsync(int id)
+        => await Set
             .Include(p => p.Supplier)
             .FirstOrDefaultAsync(p => p.Id == id && p.IsActive);
 
-    public async Task<IEnumerable<Product>> GetAllAsync()
-        => await _context.Products
+    public override async Task<IEnumerable<Product>> GetAllAsync()
+        => await Set
             .Include(p => p.Supplier)
             .Where(p => p.IsActive)
             .OrderBy(p => p.Name)
             .ToListAsync();
 
-    public async Task<Product> AddAsync(Product product)
+    // Se relee para que el producto recién creado salga con su Supplier cargado; quien llama
+    // mapea a DTO de inmediato y sin esto el nombre del proveedor iría vacío.
+    public override async Task<Product> AddAsync(Product product)
     {
-        _context.Products.Add(product);
-        await _context.SaveChangesAsync();
+        await base.AddAsync(product);
         return await GetByIdAsync(product.Id) ?? product;
-    }
-
-    public async Task UpdateAsync(Product product)
-    {
-        _context.Products.Update(product);
-        await _context.SaveChangesAsync();
-    }
-
-    // Borrado lógico en cascada: la raíz y sus dependientes se marcan como inactivos en un
-    // solo SaveChangesAsync. Nada se destruye, así que los documentos ya emitidos que citan
-    // este registro conservan su historia intacta.
-    public async Task DeleteAsync(int id)
-    {
-        var product = await _context.Products.FindAsync(id);
-        if (product is null) return;
-
-        var dependents = await DeletionGraph.ResolveAsync(_context, DeletableEntity.Product, id);
-        dependents.Deactivate();
-        product.IsActive = false;
-        await _context.SaveChangesAsync();
     }
 }
