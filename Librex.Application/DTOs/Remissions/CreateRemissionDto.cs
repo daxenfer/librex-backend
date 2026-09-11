@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Librex.Application.DTOs.Remissions;
 
-public class CreateRemissionDetailDto
+public sealed record CreateRemissionDetailDto
 {
     [Required]
     public int ProductId { get; set; }
@@ -19,7 +19,7 @@ public class CreateRemissionDetailDto
     public decimal UnitPrice { get; set; }
 }
 
-public class CreateRemissionDto
+public record CreateRemissionDto
 {
     [Required]
     public int CustomerId { get; set; }

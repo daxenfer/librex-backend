@@ -3,7 +3,7 @@ using Librex.Application.Validation;
 
 namespace Librex.Application.DTOs.Users;
 
-public class CreateUserDto
+public sealed record CreateUserDto
 {
     [Required]
     [MaxLength(100)]

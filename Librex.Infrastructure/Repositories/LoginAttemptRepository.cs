@@ -4,18 +4,11 @@ using Librex.Infrastructure.Data;
 
 namespace Librex.Infrastructure.Repositories;
 
-public class LoginAttemptRepository : ILoginAttemptRepository
+public sealed class LoginAttemptRepository(LibrexDbContext context) : ILoginAttemptRepository
 {
-    private readonly LibrexDbContext _context;
-
-    public LoginAttemptRepository(LibrexDbContext context)
-    {
-        _context = context;
-    }
-
     public async Task AddAsync(LoginAttempt attempt)
     {
-        _context.LoginAttempts.Add(attempt);
-        await _context.SaveChangesAsync();
+        context.LoginAttempts.Add(attempt);
+        await context.SaveChangesAsync();
     }
 }

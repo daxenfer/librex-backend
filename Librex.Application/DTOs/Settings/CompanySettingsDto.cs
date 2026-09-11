@@ -1,6 +1,6 @@
 namespace Librex.Application.DTOs.Settings;
 
-public class CompanySettingsDto
+public sealed record CompanySettingsDto
 {
     public int Id { get; set; }
     public string CompanyName { get; set; } = string.Empty;

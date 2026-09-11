@@ -4,24 +4,17 @@ using Librex.Domain.Interfaces;
 
 namespace Librex.Application.UseCases.Settings;
 
-public class CompanySettingsService : ICompanySettingsService
+public sealed class CompanySettingsService(ICompanySettingsRepository repository) : ICompanySettingsService
 {
-    private readonly ICompanySettingsRepository _repository;
-
-    public CompanySettingsService(ICompanySettingsRepository repository)
-    {
-        _repository = repository;
-    }
-
     public async Task<CompanySettingsDto> GetAsync()
     {
-        var settings = await _repository.GetAsync();
+        var settings = await repository.GetAsync();
         return MapToDto(settings);
     }
 
     public async Task<CompanySettingsDto> UpdateAsync(UpdateCompanySettingsDto dto)
     {
-        var settings = await _repository.GetAsync();
+        var settings = await repository.GetAsync();
 
         settings.CompanyName = dto.CompanyName;
         settings.BrandName = dto.BrandName;
@@ -35,7 +28,7 @@ public class CompanySettingsService : ICompanySettingsService
         settings.State = dto.State;
         settings.LogoBase64 = dto.LogoBase64;
 
-        await _repository.UpdateAsync(settings);
+        await repository.UpdateAsync(settings);
         return MapToDto(settings);
     }
 

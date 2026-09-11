@@ -4,21 +4,14 @@ using Librex.Domain.Interfaces;
 
 namespace Librex.Application.UseCases.Customers;
 
-public class CustomerService : ICustomerService
+public sealed class CustomerService(ICustomerRepository repository) : ICustomerService
 {
-    private readonly ICustomerRepository _repository;
-
-    public CustomerService(ICustomerRepository repository)
-    {
-        _repository = repository;
-    }
-
     public async Task<IEnumerable<CustomerDto>> GetAllAsync()
-        => (await _repository.GetAllAsync()).Select(MapToDto);
+        => (await repository.GetAllAsync()).Select(MapToDto);
 
     public async Task<CustomerDto?> GetByIdAsync(int id)
     {
-        var customer = await _repository.GetByIdAsync(id);
+        var customer = await repository.GetByIdAsync(id);
         return customer is null ? null : MapToDto(customer);
     }
 
@@ -33,12 +26,12 @@ public class CustomerService : ICustomerService
             Phone = dto.Phone,
             City = dto.City,
         };
-        return MapToDto(await _repository.AddAsync(customer));
+        return MapToDto(await repository.AddAsync(customer));
     }
 
     public async Task<CustomerDto?> UpdateAsync(int id, UpdateCustomerDto dto)
     {
-        var customer = await _repository.GetByIdAsync(id);
+        var customer = await repository.GetByIdAsync(id);
         if (customer is null) return null;
 
         customer.Name = dto.Name;
@@ -48,15 +41,15 @@ public class CustomerService : ICustomerService
         customer.Phone = dto.Phone;
         customer.City = dto.City;
 
-        await _repository.UpdateAsync(customer);
+        await repository.UpdateAsync(customer);
         return MapToDto(customer);
     }
 
     public async Task<bool> DeleteAsync(int id)
     {
-        var customer = await _repository.GetByIdAsync(id);
+        var customer = await repository.GetByIdAsync(id);
         if (customer is null) return false;
-        await _repository.DeleteAsync(id);
+        await repository.DeleteAsync(id);
         return true;
     }
 

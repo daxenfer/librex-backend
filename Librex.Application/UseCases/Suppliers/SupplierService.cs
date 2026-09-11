@@ -4,21 +4,14 @@ using Librex.Domain.Interfaces;
 
 namespace Librex.Application.UseCases.Suppliers;
 
-public class SupplierService : ISupplierService
+public sealed class SupplierService(ISupplierRepository repository) : ISupplierService
 {
-    private readonly ISupplierRepository _repository;
-
-    public SupplierService(ISupplierRepository repository)
-    {
-        _repository = repository;
-    }
-
     public async Task<IEnumerable<SupplierDto>> GetAllAsync()
-        => (await _repository.GetAllAsync()).Select(MapToDto);
+        => (await repository.GetAllAsync()).Select(MapToDto);
 
     public async Task<SupplierDto?> GetByIdAsync(int id)
     {
-        var supplier = await _repository.GetByIdAsync(id);
+        var supplier = await repository.GetByIdAsync(id);
         return supplier is null ? null : MapToDto(supplier);
     }
 
@@ -31,12 +24,12 @@ public class SupplierService : ISupplierService
             Phone = dto.Phone,
             Email = dto.Email,
         };
-        return MapToDto(await _repository.AddAsync(supplier));
+        return MapToDto(await repository.AddAsync(supplier));
     }
 
     public async Task<SupplierDto?> UpdateAsync(int id, UpdateSupplierDto dto)
     {
-        var supplier = await _repository.GetByIdAsync(id);
+        var supplier = await repository.GetByIdAsync(id);
         if (supplier is null) return null;
 
         supplier.Name = dto.Name;
@@ -44,15 +37,15 @@ public class SupplierService : ISupplierService
         supplier.Phone = dto.Phone;
         supplier.Email = dto.Email;
 
-        await _repository.UpdateAsync(supplier);
+        await repository.UpdateAsync(supplier);
         return MapToDto(supplier);
     }
 
     public async Task<bool> DeleteAsync(int id)
     {
-        var supplier = await _repository.GetByIdAsync(id);
+        var supplier = await repository.GetByIdAsync(id);
         if (supplier is null) return false;
-        await _repository.DeleteAsync(id);
+        await repository.DeleteAsync(id);
         return true;
     }
 

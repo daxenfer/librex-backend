@@ -11,7 +11,9 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace Librex.Application.UseCases.Auth;
 
-public class AuthService : IAuthService
+public sealed class AuthService(IUserRepository userRepository,
+        ILoginAttemptRepository attemptRepository,
+        IConfiguration configuration) : IAuthService
 {
     // Hash de una contraseña que nadie tiene. Se verifica contra él cuando el usuario no existe,
     // para que la respuesta tarde lo mismo que un intento contra una cuenta real: si solo se
@@ -19,19 +21,7 @@ public class AuthService : IAuthService
     // nombres están dados de alta, que es la mitad del trabajo de quien ataca.
     private const string DummyHash = "$2a$11$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
 
-    private readonly IUserRepository _userRepository;
-    private readonly ILoginAttemptRepository _attemptRepository;
-    private readonly IConfiguration _configuration;
 
-    public AuthService(
-        IUserRepository userRepository,
-        ILoginAttemptRepository attemptRepository,
-        IConfiguration configuration)
-    {
-        _userRepository = userRepository;
-        _attemptRepository = attemptRepository;
-        _configuration = configuration;
-    }
 
     // Devuelve null en todos los casos de fallo, sin distinguirlos: al usuario se le responde
     // siempre lo mismo. Decirle "cuenta bloqueada" o "ese usuario no existe" le confirmaría a
@@ -39,7 +29,7 @@ public class AuthService : IAuthService
     public async Task<LoginResponseDto?> LoginAsync(LoginDto dto, LoginRequestContext context)
     {
         var username = dto.Username?.Trim() ?? string.Empty;
-        var user = await _userRepository.GetByUsernameAsync(username);
+        var user = await userRepository.GetByUsernameAsync(username);
 
         // Siempre se verifica, exista o no el usuario — ver DummyHash.
         var passwordMatches = BCrypt.Net.BCrypt.Verify(dto.Password, user?.PasswordHash ?? DummyHash);
@@ -65,7 +55,7 @@ public class AuthService : IAuthService
                 user.FailedLoginAttempts = 0;   // el bloqueo sustituye al contador
             }
 
-            await _userRepository.UpdateAsync(user);
+            await userRepository.UpdateAsync(user);
             return await RejectAsync(username, LoginOutcome.BadPassword, context);
         }
 
@@ -78,7 +68,7 @@ public class AuthService : IAuthService
         if (string.IsNullOrEmpty(user.SecurityStamp))
             user.SecurityStamp = Guid.NewGuid().ToString("N");
 
-        await _userRepository.UpdateAsync(user);
+        await userRepository.UpdateAsync(user);
         await LogAsync(username, LoginOutcome.Success, context);
 
         return BuildToken(user);
@@ -96,7 +86,7 @@ public class AuthService : IAuthService
     {
         try
         {
-            await _attemptRepository.AddAsync(new LoginAttempt
+            await attemptRepository.AddAsync(new LoginAttempt
             {
                 Username = username.Length > 100 ? username[..100] : username,
                 Succeeded = outcome == LoginOutcome.Success,
@@ -113,11 +103,11 @@ public class AuthService : IAuthService
 
     private LoginResponseDto BuildToken(User user)
     {
-        var secretKey = _configuration["Jwt:Key"]
+        var secretKey = configuration["Jwt:Key"]
             ?? throw new InvalidOperationException("Jwt:Key is not configured");
-        var issuer = _configuration["Jwt:Issuer"] ?? "LibrexAPI";
-        var audience = _configuration["Jwt:Audience"] ?? "LibrexClients";
-        var expirationMinutes = int.Parse(_configuration["Jwt:ExpirationMinutes"] ?? "480");
+        var issuer = configuration["Jwt:Issuer"] ?? "LibrexAPI";
+        var audience = configuration["Jwt:Audience"] ?? "LibrexClients";
+        var expirationMinutes = int.Parse(configuration["Jwt:ExpirationMinutes"] ?? "480");
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -129,8 +119,8 @@ public class AuthService : IAuthService
         // siguiente login o cuando expire el actual.
         var permissions = Permissions.ForRole(user.Role);
 
-        var claims = new List<Claim>
-        {
+        List<Claim> claims =
+        [
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new(JwtRegisteredClaimNames.UniqueName, user.Username),
             new(ClaimTypes.Name, user.Username),
@@ -138,7 +128,7 @@ public class AuthService : IAuthService
             new("fullName", user.FullName),
             new(SecurityClaims.Stamp, user.SecurityStamp),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-        };
+        ];
         claims.AddRange(permissions.Select(p => new Claim(Permissions.ClaimType, p)));
 
         var token = new JwtSecurityToken(

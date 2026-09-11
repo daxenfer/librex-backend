@@ -1,6 +1,6 @@
 namespace Librex.Application.DTOs.Customers;
 
-public class CustomerDto
+public sealed record CustomerDto
 {
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;

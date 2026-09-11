@@ -8,16 +8,11 @@ namespace Librex.API.Controllers;
 
 [ApiController]
 [Route("api/auth")]
-public class AuthController : ControllerBase
+public sealed class AuthController(IAuthService service) : ControllerBase
 {
     private const int MaxUserAgentChars = 512;
 
-    private readonly IAuthService _service;
 
-    public AuthController(IAuthService service)
-    {
-        _service = service;
-    }
 
     [HttpPost("login")]
     [EnableRateLimiting(RateLimitPolicies.Login)]
@@ -26,7 +21,7 @@ public class AuthController : ControllerBase
     [ProducesResponseType(429)]
     public async Task<ActionResult<LoginResponseDto>> Login([FromBody] LoginDto dto)
     {
-        var result = await _service.LoginAsync(dto, BuildContext());
+        var result = await service.LoginAsync(dto, BuildContext());
         return result is null ? Unauthorized(new { message = "Invalid credentials" }) : Ok(result);
     }
 

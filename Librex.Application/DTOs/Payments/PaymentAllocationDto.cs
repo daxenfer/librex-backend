@@ -2,14 +2,14 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Librex.Application.DTOs.Payments;
 
-public class PaymentAllocationDto
+public sealed record PaymentAllocationDto
 {
     public int RemissionId { get; set; }
     public string RemissionFolioFormatted { get; set; } = string.Empty;
     public decimal Amount { get; set; }
 }
 
-public class CreatePaymentAllocationDto
+public sealed record CreatePaymentAllocationDto
 {
     [Required]
     public int RemissionId { get; set; }

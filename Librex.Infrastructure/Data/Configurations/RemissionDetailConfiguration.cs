@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Librex.Infrastructure.Data.Configurations;
 
-public class RemissionDetailConfiguration : IEntityTypeConfiguration<RemissionDetail>
+public sealed class RemissionDetailConfiguration : IEntityTypeConfiguration<RemissionDetail>
 {
     public void Configure(EntityTypeBuilder<RemissionDetail> builder)
     {

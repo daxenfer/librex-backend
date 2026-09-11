@@ -3,7 +3,7 @@ namespace Librex.Application.DTOs.Users;
 // La matriz de autorización tal como está compilada, para mostrarla como referencia. Es de solo
 // lectura: los permisos de cada rol viven en Librex.Domain/Constants/Permissions.cs y cambiarlos
 // requiere recompilar, no un dato de la base.
-public class PermissionMatrixDto
+public sealed record PermissionMatrixDto
 {
     // Roles de mayor a menor alcance, que es el orden en que se pintan las columnas.
     public string[] Roles { get; set; } = [];

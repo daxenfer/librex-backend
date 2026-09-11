@@ -3,7 +3,7 @@ namespace Librex.Application.DTOs.Deletion;
 // Lo que provoca eliminar una entidad, para confirmarlo con el usuario.
 // Items: lo que se elimina junto con ella. PreservedItems: los documentos ya emitidos que la
 // siguen citando y que no se modifican.
-public class DeletionImpactDto
+public sealed record DeletionImpactDto
 {
     public string EntityType { get; set; } = string.Empty;
     public int Id { get; set; }

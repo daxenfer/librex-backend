@@ -14,7 +14,7 @@ namespace Librex.API.Middleware;
 // catch solo puede caer al siguiente nivel DISTINTO o rendirse en silencio — nunca vuelve a
 // invocar el método que arma o guarda el registro, así que un ciclo es estructuralmente
 // imposible, no solo improbable.
-public class ErrorLoggingMiddleware
+public sealed class ErrorLoggingMiddleware
 {
     private const int MaxBodyReadChars = 8000;   // tope de LECTURA del stream, antes de redactar/truncar
     private const int MaxBodyStoredChars = 2000;

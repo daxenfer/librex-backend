@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Librex.Application.DTOs.Customers;
 
-public class CreateCustomerDto
+public record CreateCustomerDto
 {
     [Required]
     [MaxLength(200)]

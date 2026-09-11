@@ -4,33 +4,26 @@ using Librex.Domain.Interfaces;
 
 namespace Librex.Application.UseCases.Products;
 
-public class ProductService : IProductService
+public sealed class ProductService(IProductRepository repository) : IProductService
 {
-    private readonly IProductRepository _repository;
-
-    public ProductService(IProductRepository repository)
-    {
-        _repository = repository;
-    }
-
     public async Task<IEnumerable<ProductDto>> GetAllAsync()
-        => (await _repository.GetAllAsync()).Select(MapToDto);
+        => (await repository.GetAllAsync()).Select(MapToDto);
 
     public async Task<ProductDto?> GetByIdAsync(int id)
     {
-        var product = await _repository.GetByIdAsync(id);
+        var product = await repository.GetByIdAsync(id);
         return product is null ? null : MapToDto(product);
     }
 
     public async Task<ProductDto> CreateAsync(CreateProductDto dto)
     {
         var product = new Product { Name = dto.Name, Isbn = dto.Isbn, SchoolLevel = dto.SchoolLevel, UnitType = dto.UnitType, SupplierId = dto.SupplierId };
-        return MapToDto(await _repository.AddAsync(product));
+        return MapToDto(await repository.AddAsync(product));
     }
 
     public async Task<ProductDto?> UpdateAsync(int id, UpdateProductDto dto)
     {
-        var product = await _repository.GetByIdAsync(id);
+        var product = await repository.GetByIdAsync(id);
         if (product is null) return null;
 
         product.Name = dto.Name;
@@ -39,15 +32,15 @@ public class ProductService : IProductService
         product.UnitType = dto.UnitType;
         product.SupplierId = dto.SupplierId;
 
-        await _repository.UpdateAsync(product);
+        await repository.UpdateAsync(product);
         return MapToDto(product);
     }
 
     public async Task<bool> DeleteAsync(int id)
     {
-        var product = await _repository.GetByIdAsync(id);
+        var product = await repository.GetByIdAsync(id);
         if (product is null) return false;
-        await _repository.DeleteAsync(id);
+        await repository.DeleteAsync(id);
         return true;
     }
 

@@ -4,27 +4,20 @@ using Librex.Domain.Interfaces;
 
 namespace Librex.Application.UseCases.Remissions;
 
-public class RemissionService : IRemissionService
+public sealed class RemissionService(IRemissionRepository repository) : IRemissionService
 {
-    private readonly IRemissionRepository _repository;
-
-    public RemissionService(IRemissionRepository repository)
-    {
-        _repository = repository;
-    }
-
     public async Task<IEnumerable<RemissionDto>> GetAllAsync()
-        => (await _repository.GetAllWithCustomerAsync()).Select(MapToDto);
+        => (await repository.GetAllWithCustomerAsync()).Select(MapToDto);
 
     public async Task<RemissionDto?> GetByIdAsync(int id)
     {
-        var remission = await _repository.GetByIdWithDetailsAsync(id);
+        var remission = await repository.GetByIdWithDetailsAsync(id);
         return remission is null ? null : MapToDto(remission);
     }
 
     public async Task<RemissionDto> CreateAsync(CreateRemissionDto dto)
     {
-        var folio = await _repository.GetNextFolioAsync();
+        var folio = await repository.GetNextFolioAsync();
 
         var remission = new Remission
         {
@@ -51,14 +44,14 @@ public class RemissionService : IRemissionService
             }).ToList(),
         };
 
-        var created = await _repository.AddAsync(remission);
-        var full = await _repository.GetByIdWithDetailsAsync(created.Id);
+        var created = await repository.AddAsync(remission);
+        var full = await repository.GetByIdWithDetailsAsync(created.Id);
         return MapToDto(full!);
     }
 
     public async Task<RemissionDto?> UpdateAsync(int id, UpdateRemissionDto dto)
     {
-        var remission = await _repository.GetByIdWithDetailsAsync(id);
+        var remission = await repository.GetByIdWithDetailsAsync(id);
         if (remission is null) return null;
 
         remission.CustomerId = dto.CustomerId;
@@ -84,16 +77,16 @@ public class RemissionService : IRemissionService
             });
         }
 
-        await _repository.UpdateAsync(remission);
-        var full = await _repository.GetByIdWithDetailsAsync(id);
+        await repository.UpdateAsync(remission);
+        var full = await repository.GetByIdWithDetailsAsync(id);
         return MapToDto(full!);
     }
 
     public async Task<bool> DeleteAsync(int id)
     {
-        var remission = await _repository.GetByIdAsync(id);
+        var remission = await repository.GetByIdAsync(id);
         if (remission is null) return false;
-        await _repository.DeleteAsync(id);
+        await repository.DeleteAsync(id);
         return true;
     }
 

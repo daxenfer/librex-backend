@@ -1,6 +1,5 @@
 using Librex.Domain.Constants;
 using Librex.Domain.Entities;
-using Librex.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace Librex.Infrastructure.Data;

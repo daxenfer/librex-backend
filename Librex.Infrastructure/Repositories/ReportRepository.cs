@@ -5,18 +5,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Librex.Infrastructure.Repositories;
 
-public class ReportRepository : IReportRepository
+public sealed class ReportRepository(LibrexDbContext context) : IReportRepository
 {
-    private readonly LibrexDbContext _context;
-
-    public ReportRepository(LibrexDbContext context)
-    {
-        _context = context;
-    }
-
     public async Task<SupplierReportDto> GetBySupplierAsync(int? supplierId)
     {
-        var salesQuery = _context.RemissionDetails
+        var salesQuery = context.RemissionDetails
             .Where(d => d.IsActive && d.Remission.IsActive);
         if (supplierId.HasValue)
             salesQuery = salesQuery.Where(d => d.Product.SupplierId == supplierId.Value);
@@ -37,7 +30,7 @@ public class ReportRepository : IReportRepository
 
         // Subtotal completo por remisión (sin filtrar por proveedor) para prorratear
         // el descuento, que ahora es un monto fijo de la remisión.
-        var fullSubtotals = await _context.RemissionDetails
+        var fullSubtotals = await context.RemissionDetails
             .Where(d => d.IsActive && d.Remission.IsActive)
             .GroupBy(d => d.RemissionId)
             .Select(g => new { RemissionId = g.Key, Subtotal = g.Sum(d => d.Quantity * d.UnitPrice) })
@@ -56,7 +49,7 @@ public class ReportRepository : IReportRepository
                 })
             }).ToList();
 
-        var returnsQuery = _context.ReturnNoteDetails
+        var returnsQuery = context.ReturnNoteDetails
             .Where(d => d.IsActive && d.ReturnNote.IsActive);
         if (supplierId.HasValue)
             // Mismo criterio que ya se aplica a los pagos: solo lo ligado a una remisión se le
@@ -76,7 +69,7 @@ public class ReportRepository : IReportRepository
         if (supplierId.HasValue)
         {
             // Las asignaciones de pago llevan el monto aplicado a cada remisión.
-            var allocations = await _context.PaymentAllocations
+            var allocations = await context.PaymentAllocations
                 .Where(a => a.IsActive && a.Payment.IsActive)
                 .Select(a => new {
                     a.RemissionId,
@@ -86,7 +79,7 @@ public class ReportRepository : IReportRepository
                 })
                 .ToListAsync();
 
-            var remissionShares = await _context.RemissionDetails
+            var remissionShares = await context.RemissionDetails
                 .Where(d => d.IsActive && d.Remission.IsActive)
                 .GroupBy(d => new { d.RemissionId, d.Product.SupplierId })
                 .Select(g => new {
@@ -126,7 +119,7 @@ public class ReportRepository : IReportRepository
         else
         {
             // A nivel cliente, todo el dinero recibido (incluye anticipos) reduce el saldo.
-            var rawPayments = await _context.Payments
+            var rawPayments = await context.Payments
                 .Where(p => p.IsActive)
                 .Select(p => new { p.CustomerId, CustomerName = p.Customer.Name, p.Amount })
                 .ToListAsync();
@@ -177,7 +170,7 @@ public class ReportRepository : IReportRepository
 
     public async Task<SalesByProductReportDto> GetSalesByProductAsync(int? supplierId)
     {
-        var salesQuery = _context.RemissionDetails
+        var salesQuery = context.RemissionDetails
             .Where(d => d.IsActive && d.Remission.IsActive);
         if (supplierId.HasValue)
             salesQuery = salesQuery.Where(d => d.Product.SupplierId == supplierId.Value);
@@ -189,7 +182,7 @@ public class ReportRepository : IReportRepository
                                g.Key.ProductId, g.Key.ProductName, Qty = (int)g.Sum(d => d.Quantity) })
             .ToListAsync();
 
-        var returnsQuery = _context.ReturnNoteDetails
+        var returnsQuery = context.ReturnNoteDetails
             .Where(d => d.IsActive && d.ReturnNote.IsActive);
         if (supplierId.HasValue)
             returnsQuery = returnsQuery.Where(d => d.Product.SupplierId == supplierId.Value);
@@ -259,7 +252,7 @@ public class ReportRepository : IReportRepository
     public async Task<UnallocatedPaymentsReportDto> GetUnallocatedPaymentsAsync()
     {
         // Total recibido por cliente (pagos activos).
-        var payments = await _context.Payments
+        var payments = await context.Payments
             .Where(p => p.IsActive)
             .GroupBy(p => new { p.CustomerId, CustomerName = p.Customer.Name })
             .Select(g => new {
@@ -270,7 +263,7 @@ public class ReportRepository : IReportRepository
             .ToListAsync();
 
         // Monto ya aplicado a remisiones por cliente (asignaciones activas de pagos activos).
-        var allocated = await _context.PaymentAllocations
+        var allocated = await context.PaymentAllocations
             .Where(a => a.IsActive && a.Payment.IsActive)
             .GroupBy(a => a.Payment.CustomerId)
             .Select(g => new { CustomerId = g.Key, Amount = g.Sum(a => a.Amount) })
@@ -294,7 +287,7 @@ public class ReportRepository : IReportRepository
     // sin decir contra qué venta. Igual que los anticipos, no se atribuye a ningún proveedor.
     public async Task<UnlinkedReturnsReportDto> GetUnlinkedReturnsAsync()
     {
-        var notes = await _context.ReturnNotes
+        var notes = await context.ReturnNotes
             .Where(n => n.IsActive && n.RemissionId == null)
             .Select(n => new
             {

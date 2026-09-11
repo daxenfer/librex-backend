@@ -1,6 +1,6 @@
 namespace Librex.Application.DTOs.Remissions;
 
-public class RemissionDto
+public sealed record RemissionDto
 {
     public int Id { get; set; }
     public int FolioNumber { get; set; }

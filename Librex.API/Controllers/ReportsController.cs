@@ -8,28 +8,21 @@ namespace Librex.API.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/reports")]
-public class ReportsController : ControllerBase
+public sealed class ReportsController(IReportService service) : ControllerBase
 {
-    private readonly IReportService _service;
-
-    public ReportsController(IReportService service)
-    {
-        _service = service;
-    }
-
     [HttpGet("by-supplier")]
     public async Task<ActionResult<SupplierReportDto>> BySupplier([FromQuery] int? supplierId)
-        => Ok(await _service.GetBySupplierAsync(supplierId));
+        => Ok(await service.GetBySupplierAsync(supplierId));
 
     [HttpGet("sales-by-product")]
     public async Task<ActionResult<SalesByProductReportDto>> SalesByProduct([FromQuery] int? supplierId)
-        => Ok(await _service.GetSalesByProductAsync(supplierId));
+        => Ok(await service.GetSalesByProductAsync(supplierId));
 
     [HttpGet("unallocated-payments")]
     public async Task<ActionResult<UnallocatedPaymentsReportDto>> UnallocatedPayments()
-        => Ok(await _service.GetUnallocatedPaymentsAsync());
+        => Ok(await service.GetUnallocatedPaymentsAsync());
 
     [HttpGet("unlinked-returns")]
     public async Task<ActionResult<UnlinkedReturnsReportDto>> UnlinkedReturns()
-        => Ok(await _service.GetUnlinkedReturnsAsync());
+        => Ok(await service.GetUnlinkedReturnsAsync());
 }

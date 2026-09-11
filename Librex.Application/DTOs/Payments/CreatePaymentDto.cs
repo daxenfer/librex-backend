@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Librex.Application.DTOs.Payments;
 
-public class CreatePaymentDto : IValidatableObject
+public record CreatePaymentDto : IValidatableObject
 {
     [Required]
     public int CustomerId { get; set; }

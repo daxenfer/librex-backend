@@ -3,7 +3,7 @@ using Librex.Application.Validation;
 
 namespace Librex.Application.DTOs.Users;
 
-public class ChangePasswordDto
+public sealed record ChangePasswordDto
 {
     [Required]
     [StrongPassword]

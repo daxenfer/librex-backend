@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 namespace Librex.Application.DTOs.Users;
 
 // La contraseña no se toca aquí: se cambia por su propio endpoint.
-public class UpdateUserDto
+public sealed record UpdateUserDto
 {
     [Required]
     [MaxLength(100)]

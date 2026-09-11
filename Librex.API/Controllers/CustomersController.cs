@@ -12,25 +12,16 @@ namespace Librex.API.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/customers")]
-public class CustomersController : ControllerBase
+public sealed class CustomersController(ICustomerService service, IDeletionService deletionService) : ControllerBase
 {
-    private readonly ICustomerService _service;
-    private readonly IDeletionService _deletionService;
-
-    public CustomersController(ICustomerService service, IDeletionService deletionService)
-    {
-        _service = service;
-        _deletionService = deletionService;
-    }
-
     [HttpGet]
     public async Task<ActionResult<IEnumerable<CustomerDto>>> GetAll()
-        => Ok(await _service.GetAllAsync());
+        => Ok(await service.GetAllAsync());
 
     [HttpGet("{id:int}")]
     public async Task<ActionResult<CustomerDto>> GetById(int id)
     {
-        var customer = await _service.GetByIdAsync(id);
+        var customer = await service.GetByIdAsync(id);
         return customer is null ? NotFound() : Ok(customer);
     }
 
@@ -38,7 +29,7 @@ public class CustomersController : ControllerBase
     [Authorize(Policy = Permissions.CustomersWrite)]
     public async Task<ActionResult<CustomerDto>> Create([FromBody] CreateCustomerDto dto)
     {
-        var created = await _service.CreateAsync(dto);
+        var created = await service.CreateAsync(dto);
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
 
@@ -46,7 +37,7 @@ public class CustomersController : ControllerBase
     [Authorize(Policy = Permissions.CustomersWrite)]
     public async Task<ActionResult<CustomerDto>> Update(int id, [FromBody] UpdateCustomerDto dto)
     {
-        var updated = await _service.UpdateAsync(id, dto);
+        var updated = await service.UpdateAsync(id, dto);
         return updated is null ? NotFound() : Ok(updated);
     }
 
@@ -55,7 +46,7 @@ public class CustomersController : ControllerBase
     [HttpGet("{id:int}/deletion-impact")]
     public async Task<ActionResult<DeletionImpactDto>> GetDeletionImpact(int id)
     {
-        var impact = await _deletionService.GetImpactAsync(DeletableEntity.Customer, id);
+        var impact = await deletionService.GetImpactAsync(DeletableEntity.Customer, id);
         return impact is null ? NotFound() : Ok(impact);
     }
 
@@ -63,7 +54,7 @@ public class CustomersController : ControllerBase
     [Authorize(Policy = Permissions.CustomersDelete)]
     public async Task<IActionResult> Delete(int id)
     {
-        var deleted = await _service.DeleteAsync(id);
+        var deleted = await service.DeleteAsync(id);
         return deleted ? NoContent() : NotFound();
     }
 }

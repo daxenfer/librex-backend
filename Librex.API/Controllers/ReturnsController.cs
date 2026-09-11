@@ -12,25 +12,16 @@ namespace Librex.API.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/returns")]
-public class ReturnsController : ControllerBase
+public sealed class ReturnsController(IReturnNoteService service, IDeletionService deletionService) : ControllerBase
 {
-    private readonly IReturnNoteService _service;
-    private readonly IDeletionService _deletionService;
-
-    public ReturnsController(IReturnNoteService service, IDeletionService deletionService)
-    {
-        _service = service;
-        _deletionService = deletionService;
-    }
-
     [HttpGet]
     public async Task<ActionResult<IEnumerable<ReturnNoteDto>>> GetAll()
-        => Ok(await _service.GetAllAsync());
+        => Ok(await service.GetAllAsync());
 
     [HttpGet("{id:int}")]
     public async Task<ActionResult<ReturnNoteDto>> GetById(int id)
     {
-        var note = await _service.GetByIdAsync(id);
+        var note = await service.GetByIdAsync(id);
         return note is null ? NotFound() : Ok(note);
     }
 
@@ -38,7 +29,7 @@ public class ReturnsController : ControllerBase
     [Authorize(Policy = Permissions.ReturnsWrite)]
     public async Task<ActionResult<ReturnNoteDto>> Create([FromBody] CreateReturnNoteDto dto)
     {
-        var created = await _service.CreateAsync(dto);
+        var created = await service.CreateAsync(dto);
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
 
@@ -46,7 +37,7 @@ public class ReturnsController : ControllerBase
     [Authorize(Policy = Permissions.ReturnsWrite)]
     public async Task<ActionResult<ReturnNoteDto>> Update(int id, [FromBody] UpdateReturnNoteDto dto)
     {
-        var updated = await _service.UpdateAsync(id, dto);
+        var updated = await service.UpdateAsync(id, dto);
         return updated is null ? NotFound() : Ok(updated);
     }
 
@@ -55,7 +46,7 @@ public class ReturnsController : ControllerBase
     [HttpGet("{id:int}/deletion-impact")]
     public async Task<ActionResult<DeletionImpactDto>> GetDeletionImpact(int id)
     {
-        var impact = await _deletionService.GetImpactAsync(DeletableEntity.ReturnNote, id);
+        var impact = await deletionService.GetImpactAsync(DeletableEntity.ReturnNote, id);
         return impact is null ? NotFound() : Ok(impact);
     }
 
@@ -63,7 +54,7 @@ public class ReturnsController : ControllerBase
     [Authorize(Policy = Permissions.ReturnsDelete)]
     public async Task<IActionResult> Delete(int id)
     {
-        var deleted = await _service.DeleteAsync(id);
+        var deleted = await service.DeleteAsync(id);
         return deleted ? NoContent() : NotFound();
     }
 }

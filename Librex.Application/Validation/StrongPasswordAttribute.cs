@@ -20,7 +20,7 @@ public sealed class StrongPasswordAttribute : ValidationAttribute
         if (password.Length < MinimumLength)
             return new ValidationResult($"La contraseña debe tener al menos {MinimumLength} caracteres.");
 
-        var missing = new List<string>();
+        List<string> missing = [];
         if (!password.Any(char.IsUpper)) missing.Add("una mayúscula");
         if (!password.Any(char.IsLower)) missing.Add("una minúscula");
         if (!password.Any(char.IsDigit)) missing.Add("un número");

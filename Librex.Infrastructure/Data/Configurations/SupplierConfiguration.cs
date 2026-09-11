@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Librex.Infrastructure.Data.Configurations;
 
-public class SupplierConfiguration : IEntityTypeConfiguration<Supplier>
+public sealed class SupplierConfiguration : IEntityTypeConfiguration<Supplier>
 {
     public void Configure(EntityTypeBuilder<Supplier> builder)
     {

@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Librex.Application.DTOs.ReturnNotes;
 
-public class CreateReturnNoteDetailDto
+public sealed record CreateReturnNoteDetailDto
 {
     [Required]
     public int ProductId { get; set; }
@@ -16,7 +16,7 @@ public class CreateReturnNoteDetailDto
     public decimal UnitPrice { get; set; }
 }
 
-public class CreateReturnNoteDto : IValidatableObject
+public record CreateReturnNoteDto : IValidatableObject
 {
     [Required]
     public int CustomerId { get; set; }

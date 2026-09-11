@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Librex.Application.DTOs.Auth;
 
-public class LoginDto
+public sealed record LoginDto
 {
     [Required]
     public string Username { get; set; } = string.Empty;

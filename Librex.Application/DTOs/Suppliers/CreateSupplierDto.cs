@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Librex.Application.DTOs.Suppliers;
 
-public class CreateSupplierDto
+public record CreateSupplierDto
 {
     [Required]
     [MaxLength(200)]

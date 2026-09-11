@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Librex.Infrastructure.Data.Configurations;
 
-public class ReturnNoteDetailConfiguration : IEntityTypeConfiguration<ReturnNoteDetail>
+public sealed class ReturnNoteDetailConfiguration : IEntityTypeConfiguration<ReturnNoteDetail>
 {
     public void Configure(EntityTypeBuilder<ReturnNoteDetail> builder)
     {

@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Librex.Application.DTOs.Products;
 
-public class CreateProductDto
+public record CreateProductDto
 {
     [Required]
     [MaxLength(200)]

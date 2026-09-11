@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Librex.Application.DTOs.Settings;
 
-public class UpdateCompanySettingsDto
+public sealed record UpdateCompanySettingsDto
 {
     [Required]
     [MaxLength(200)]

@@ -5,23 +5,14 @@ using Librex.Domain.Interfaces;
 
 namespace Librex.Application.UseCases.Payments;
 
-public class PaymentService : IPaymentService
+public sealed class PaymentService(IPaymentRepository repository, IRemissionRepository remissions) : IPaymentService
 {
-    private readonly IPaymentRepository _repository;
-    private readonly IRemissionRepository _remissions;
-
-    public PaymentService(IPaymentRepository repository, IRemissionRepository remissions)
-    {
-        _repository = repository;
-        _remissions = remissions;
-    }
-
     public async Task<IEnumerable<PaymentDto>> GetAllAsync()
-        => (await _repository.GetAllWithCustomerAsync()).Select(MapToDto);
+        => (await repository.GetAllWithCustomerAsync()).Select(MapToDto);
 
     public async Task<PaymentDto?> GetByIdAsync(int id)
     {
-        var payment = await _repository.GetByIdWithCustomerAsync(id);
+        var payment = await repository.GetByIdWithCustomerAsync(id);
         return payment is null ? null : MapToDto(payment);
     }
 
@@ -29,7 +20,7 @@ public class PaymentService : IPaymentService
     {
         await EnsureAllocationsBelongToCustomerAsync(dto.Allocations, dto.CustomerId);
 
-        var folio = await _repository.GetNextFolioAsync();
+        var folio = await repository.GetNextFolioAsync();
 
         var payment = new Payment
         {
@@ -47,14 +38,14 @@ public class PaymentService : IPaymentService
             Allocations = BuildAllocations(dto.Allocations),
         };
 
-        var created = await _repository.AddAsync(payment);
-        var full = await _repository.GetByIdWithCustomerAsync(created.Id);
+        var created = await repository.AddAsync(payment);
+        var full = await repository.GetByIdWithCustomerAsync(created.Id);
         return MapToDto(full!);
     }
 
     public async Task<PaymentDto?> UpdateAsync(int id, UpdatePaymentDto dto)
     {
-        var payment = await _repository.GetByIdWithCustomerAsync(id);
+        var payment = await repository.GetByIdWithCustomerAsync(id);
         if (payment is null) return null;
 
         await EnsureAllocationsBelongToCustomerAsync(dto.Allocations, dto.CustomerId);
@@ -74,16 +65,16 @@ public class PaymentService : IPaymentService
         foreach (var a in BuildAllocations(dto.Allocations))
             payment.Allocations.Add(a);
 
-        await _repository.UpdateAsync(payment);
-        var full = await _repository.GetByIdWithCustomerAsync(id);
+        await repository.UpdateAsync(payment);
+        var full = await repository.GetByIdWithCustomerAsync(id);
         return MapToDto(full!);
     }
 
     public async Task<bool> DeleteAsync(int id)
     {
-        var payment = await _repository.GetByIdAsync(id);
+        var payment = await repository.GetByIdAsync(id);
         if (payment is null) return false;
-        await _repository.DeleteAsync(id);
+        await repository.DeleteAsync(id);
         return true;
     }
 
@@ -95,7 +86,7 @@ public class PaymentService : IPaymentService
         var remissionIds = allocations.Where(a => a.Amount > 0).Select(a => a.RemissionId).Distinct();
         foreach (var remissionId in remissionIds)
         {
-            var remission = await _remissions.GetByIdAsync(remissionId);
+            var remission = await remissions.GetByIdAsync(remissionId);
             if (remission is null)
                 throw new BusinessRuleException("Una de las remisiones del reparto no existe o fue eliminada.");
             if (remission.CustomerId != customerId)

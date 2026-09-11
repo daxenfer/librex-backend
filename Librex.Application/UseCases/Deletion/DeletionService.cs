@@ -4,18 +4,11 @@ using Librex.Domain.Interfaces;
 
 namespace Librex.Application.UseCases.Deletion;
 
-public class DeletionService : IDeletionService
+public sealed class DeletionService(IDeletionRepository repository) : IDeletionService
 {
-    private readonly IDeletionRepository _repository;
-
-    public DeletionService(IDeletionRepository repository)
-    {
-        _repository = repository;
-    }
-
     public async Task<DeletionImpactDto?> GetImpactAsync(DeletableEntity entity, int id)
     {
-        var impact = await _repository.GetImpactAsync(entity, id);
+        var impact = await repository.GetImpactAsync(entity, id);
         return impact is null ? null : MapToDto(impact);
     }
 

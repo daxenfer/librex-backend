@@ -1,6 +1,6 @@
 namespace Librex.Application.DTOs.Suppliers;
 
-public class SupplierDto
+public sealed record SupplierDto
 {
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;

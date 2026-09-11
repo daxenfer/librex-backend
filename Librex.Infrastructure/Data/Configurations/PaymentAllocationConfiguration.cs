@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Librex.Infrastructure.Data.Configurations;
 
-public class PaymentAllocationConfiguration : IEntityTypeConfiguration<PaymentAllocation>
+public sealed class PaymentAllocationConfiguration : IEntityTypeConfiguration<PaymentAllocation>
 {
     public void Configure(EntityTypeBuilder<PaymentAllocation> builder)
     {

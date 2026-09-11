@@ -1,6 +1,6 @@
 namespace Librex.Application.DTOs.Payments;
 
-public class PaymentDto
+public sealed record PaymentDto
 {
     public int Id { get; set; }
     public int FolioNumber { get; set; }

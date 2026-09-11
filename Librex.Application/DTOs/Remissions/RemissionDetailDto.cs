@@ -1,6 +1,6 @@
 namespace Librex.Application.DTOs.Remissions;
 
-public class RemissionDetailDto
+public sealed record RemissionDetailDto
 {
     public int Id { get; set; }
     public int ProductId { get; set; }

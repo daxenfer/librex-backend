@@ -9,21 +9,14 @@ namespace Librex.API.Controllers;
 [ApiController]
 [Route("api/settings")]
 [Authorize]
-public class SettingsController : ControllerBase
+public sealed class SettingsController(ICompanySettingsService service) : ControllerBase
 {
-    private readonly ICompanySettingsService _service;
-
-    public SettingsController(ICompanySettingsService service)
-    {
-        _service = service;
-    }
-
     [HttpGet]
     public async Task<ActionResult<CompanySettingsDto>> Get()
-        => Ok(await _service.GetAsync());
+        => Ok(await service.GetAsync());
 
     [HttpPut]
     [Authorize(Policy = Permissions.SettingsManage)]
     public async Task<ActionResult<CompanySettingsDto>> Update([FromBody] UpdateCompanySettingsDto dto)
-        => Ok(await _service.UpdateAsync(dto));
+        => Ok(await service.UpdateAsync(dto));
 }

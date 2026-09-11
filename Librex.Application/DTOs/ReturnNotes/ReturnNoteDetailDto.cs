@@ -1,6 +1,6 @@
 namespace Librex.Application.DTOs.ReturnNotes;
 
-public class ReturnNoteDetailDto
+public sealed record ReturnNoteDetailDto
 {
     public int Id { get; set; }
     public int ProductId { get; set; }

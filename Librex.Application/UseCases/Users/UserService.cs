@@ -8,21 +8,14 @@ namespace Librex.Application.UseCases.Users;
 
 // Alta, baja y cambios de usuarios. Todas las reglas de guarda viven aquí y no en el controlador:
 // son de negocio, y el frontend solo las refleja deshabilitando botones.
-public class UserService : IUserService
+public sealed class UserService(IUserRepository repository) : IUserService
 {
-    private readonly IUserRepository _repository;
-
-    public UserService(IUserRepository repository)
-    {
-        _repository = repository;
-    }
-
     public async Task<IEnumerable<UserDto>> GetAllAsync()
-        => (await _repository.GetAllAsync()).Select(MapToDto);
+        => (await repository.GetAllAsync()).Select(MapToDto);
 
     public async Task<UserDto?> GetByIdAsync(int id)
     {
-        var user = await _repository.GetByIdAsync(id);
+        var user = await repository.GetByIdAsync(id);
         return user is null || !user.IsActive ? null : MapToDto(user);
     }
 
@@ -44,7 +37,7 @@ public class UserService : IUserService
         EnsureRoleExists(role);
         EnsureCanAssign(role, actor);
 
-        if (await _repository.UsernameExistsAsync(username))
+        if (await repository.UsernameExistsAsync(username))
             throw new BusinessRuleException($"El usuario \"{username}\" ya existe.");
 
         var user = new User
@@ -55,12 +48,12 @@ public class UserService : IUserService
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
         };
 
-        return MapToDto(await _repository.AddAsync(user));
+        return MapToDto(await repository.AddAsync(user));
     }
 
     public async Task<UserDto?> UpdateAsync(int id, UpdateUserDto dto, ActingUser actor)
     {
-        var user = await _repository.GetByIdAsync(id);
+        var user = await repository.GetByIdAsync(id);
         if (user is null || !user.IsActive) return null;
 
         var role = dto.Role.Trim();
@@ -78,7 +71,7 @@ public class UserService : IUserService
         if (user.Role == Roles.SuperAdmin && role != Roles.SuperAdmin)
             await EnsureNotLastSuperAdminAsync();
 
-        if (await _repository.UsernameExistsAsync(username, id))
+        if (await repository.UsernameExistsAsync(username, id))
             throw new BusinessRuleException($"El usuario \"{username}\" ya existe.");
 
         // El rol y el nombre de usuario viajan dentro del token. Si cambian, hay que renovar el
@@ -92,13 +85,13 @@ public class UserService : IUserService
         user.ModifiedAt = DateTime.UtcNow;
         if (identityChanged) user.SecurityStamp = Guid.NewGuid().ToString("N");
 
-        await _repository.UpdateAsync(user);
+        await repository.UpdateAsync(user);
         return MapToDto(user);
     }
 
     public async Task<bool> ChangePasswordAsync(int id, ChangePasswordDto dto, ActingUser actor)
     {
-        var user = await _repository.GetByIdAsync(id);
+        var user = await repository.GetByIdAsync(id);
         if (user is null || !user.IsActive) return false;
 
         EnsureCanTouch(user, actor);
@@ -115,13 +108,13 @@ public class UserService : IUserService
         user.FailedLoginAttempts = 0;
         user.LockedOutUntil = null;
 
-        await _repository.UpdateAsync(user);
+        await repository.UpdateAsync(user);
         return true;
     }
 
     public async Task<bool> DeleteAsync(int id, ActingUser actor)
     {
-        var user = await _repository.GetByIdAsync(id);
+        var user = await repository.GetByIdAsync(id);
         if (user is null || !user.IsActive) return false;
 
         if (id == actor.Id)
@@ -132,7 +125,7 @@ public class UserService : IUserService
         if (user.Role == Roles.SuperAdmin)
             await EnsureNotLastSuperAdminAsync();
 
-        await _repository.DeleteAsync(id);   // baja lógica: IsActive = false
+        await repository.DeleteAsync(id);   // baja lógica: IsActive = false
         return true;
     }
 
@@ -162,7 +155,7 @@ public class UserService : IUserService
 
     private async Task EnsureNotLastSuperAdminAsync()
     {
-        if (await _repository.CountActiveByRoleAsync(Roles.SuperAdmin) <= 1)
+        if (await repository.CountActiveByRoleAsync(Roles.SuperAdmin) <= 1)
             throw new BusinessRuleException("Debe quedar al menos un super administrador activo.");
     }
 

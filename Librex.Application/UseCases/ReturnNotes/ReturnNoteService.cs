@@ -5,23 +5,14 @@ using Librex.Domain.Interfaces;
 
 namespace Librex.Application.UseCases.ReturnNotes;
 
-public class ReturnNoteService : IReturnNoteService
+public sealed class ReturnNoteService(IReturnNoteRepository repository, IRemissionRepository remissions) : IReturnNoteService
 {
-    private readonly IReturnNoteRepository _repository;
-    private readonly IRemissionRepository _remissions;
-
-    public ReturnNoteService(IReturnNoteRepository repository, IRemissionRepository remissions)
-    {
-        _repository = repository;
-        _remissions = remissions;
-    }
-
     public async Task<IEnumerable<ReturnNoteDto>> GetAllAsync()
-        => (await _repository.GetAllWithCustomerAsync()).Select(MapToDto);
+        => (await repository.GetAllWithCustomerAsync()).Select(MapToDto);
 
     public async Task<ReturnNoteDto?> GetByIdAsync(int id)
     {
-        var note = await _repository.GetByIdWithDetailsAsync(id);
+        var note = await repository.GetByIdWithDetailsAsync(id);
         return note is null ? null : MapToDto(note);
     }
 
@@ -29,7 +20,7 @@ public class ReturnNoteService : IReturnNoteService
     {
         await EnsureRemissionBelongsToCustomerAsync(dto.RemissionId, dto.CustomerId);
 
-        var folio = await _repository.GetNextFolioAsync();
+        var folio = await repository.GetNextFolioAsync();
 
         var note = new ReturnNote
         {
@@ -49,14 +40,14 @@ public class ReturnNoteService : IReturnNoteService
             }).ToList(),
         };
 
-        var created = await _repository.AddAsync(note);
-        var full = await _repository.GetByIdWithDetailsAsync(created.Id);
+        var created = await repository.AddAsync(note);
+        var full = await repository.GetByIdWithDetailsAsync(created.Id);
         return MapToDto(full!);
     }
 
     public async Task<ReturnNoteDto?> UpdateAsync(int id, UpdateReturnNoteDto dto)
     {
-        var note = await _repository.GetByIdWithDetailsAsync(id);
+        var note = await repository.GetByIdWithDetailsAsync(id);
         if (note is null) return null;
 
         await EnsureRemissionBelongsToCustomerAsync(dto.RemissionId, dto.CustomerId);
@@ -80,16 +71,16 @@ public class ReturnNoteService : IReturnNoteService
             });
         }
 
-        await _repository.UpdateAsync(note);
-        var full = await _repository.GetByIdWithDetailsAsync(id);
+        await repository.UpdateAsync(note);
+        var full = await repository.GetByIdWithDetailsAsync(id);
         return MapToDto(full!);
     }
 
     public async Task<bool> DeleteAsync(int id)
     {
-        var note = await _repository.GetByIdAsync(id);
+        var note = await repository.GetByIdAsync(id);
         if (note is null) return false;
-        await _repository.DeleteAsync(id);
+        await repository.DeleteAsync(id);
         return true;
     }
 
@@ -99,7 +90,7 @@ public class ReturnNoteService : IReturnNoteService
     {
         if (remissionId is null) return;
 
-        var remission = await _remissions.GetByIdAsync(remissionId.Value);
+        var remission = await remissions.GetByIdAsync(remissionId.Value);
         if (remission is null)
             throw new BusinessRuleException("La remisión indicada no existe o fue eliminada.");
         if (remission.CustomerId != customerId)
