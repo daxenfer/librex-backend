@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Text;
 using Librex.Application.UseCases.Auth;
 using Librex.Application.UseCases.Customers;
@@ -12,6 +11,7 @@ using Librex.Application.UseCases.Settings;
 using Librex.Application.UseCases.Deletion;
 using Librex.Application.UseCases.Users;
 using Librex.API.Middleware;
+using Librex.API.OpenApi;
 using Librex.API.Security;
 using Librex.Domain.Constants;
 using Librex.Domain.Interfaces;
@@ -20,7 +20,7 @@ using Librex.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
+using Scalar.AspNetCore;
 using System.Security.Claims;
 using System.Threading.RateLimiting;
 
@@ -151,37 +151,20 @@ builder.Services.AddCors(options =>
               .AllowAnyMethod());
 });
 
-// Swagger with JWT Bearer support
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
+// Documentación de la API: el documento OpenAPI lo genera el propio framework; Scalar solo lo
+// pinta. El esquema Bearer lo agrega BearerSecuritySchemeTransformer, porque OpenAPI describe
+// los endpoints pero no sabe cómo se autentican.
+builder.Services.AddOpenApi(options =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo
+    // Sin esto el documento se titula con el nombre del ensamblado ("Librex.API").
+    options.AddDocumentTransformer((document, _, _) =>
     {
-        Title = "Librex API",
-        Version = "v1",
-        Description = "Book distribution management system"
+        document.Info.Title = "Librex API";
+        document.Info.Description = "Sistema de distribución de libros.";
+        return Task.CompletedTask;
     });
 
-    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-    {
-        Name = "Authorization",
-        Type = SecuritySchemeType.ApiKey,
-        Scheme = "Bearer",
-        BearerFormat = "JWT",
-        In = ParameterLocation.Header,
-        Description = "Enter: Bearer {token}",
-    });
-
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
-        {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
-            },
-            Array.Empty<string>()
-        }
-    });
+    options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
 });
 
 var app = builder.Build();
@@ -192,23 +175,18 @@ using (var scope = app.Services.CreateScope())
     await DatabaseInitializer.SeedAsync(context, builder.Configuration["Seed:AdminPassword"]);
 }
 
-// Swagger publica el mapa completo de la API, incluidos los endpoints de usuarios. Fuera de
-// desarrollo queda apagado salvo que se prenda a propósito con Swagger:Enabled = true.
-var swaggerEnabled = app.Environment.IsDevelopment()
-    || builder.Configuration.GetValue<bool>("Swagger:Enabled");
+// La documentación publica el mapa completo de la API, incluidos los endpoints de usuarios.
+// Fuera de desarrollo queda apagada salvo que se prenda a propósito con ApiDocs:Enabled = true.
+var apiDocsEnabled = app.Environment.IsDevelopment()
+    || builder.Configuration.GetValue<bool>("ApiDocs:Enabled");
 
-if (swaggerEnabled)
+if (apiDocsEnabled)
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    app.MapOpenApi();                       // el documento, en /openapi/v1.json
+    app.MapScalarApiReference("/scalar");   // la interfaz para leerlo y probarlo
 }
 
-if (app.Environment.IsDevelopment())
-{
-    app.Lifetime.ApplicationStarted.Register(() =>
-        Process.Start(new ProcessStartInfo("http://localhost:5176/swagger") { UseShellExecute = true }));
-}
-else
+if (!app.Environment.IsDevelopment())
 {
     // Solo fuera de desarrollo: en local la API se sirve por http y redirigir a https rompería
     // el proxy de Vite.
