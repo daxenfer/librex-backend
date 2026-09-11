@@ -12,7 +12,7 @@ namespace Librex.Tests.Returns;
 
 // Capturar sin remisión sigue permitido, pero no en silencio (hace falta un motivo) y no de
 // cualquier manera: una remisión ajena al cliente nunca es aceptable.
-public class ReturnNoteRulesTests : IDisposable
+public sealed class ReturnNoteRulesTests : IDisposable
 {
     private readonly LibrexDbContext _context = TestDbContextFactory.Create();
 

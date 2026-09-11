@@ -1,0 +1,40 @@
+root = true
+
+[*]
+charset = utf-8
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{json,yml,yaml,props,targets,csproj,md}]
+indent_size = 2
+
+[*.cs]
+# Convenciones que el código ya sigue; quedan escritas para que no se pierdan.
+csharp_style_namespace_declarations = file_scoped:warning
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_expression_bodied_methods = when_on_single_line:suggestion
+csharp_prefer_braces = when_multiline:suggestion
+dotnet_style_prefer_collection_expression = true:suggestion
+dotnet_sort_system_directives_first = false
+dotnet_separate_import_directive_groups = false
+
+# El namespace debe corresponder a la carpeta. Esto es lo que habría avisado del desajuste
+# entre DTOs/Returns y el namespace ReturnNotes, que estuvo ahí meses sin que nada lo marcara.
+dotnet_diagnostic.IDE0130.severity = warning
+
+# Registrar un error en la bitácora es la ruta de último recurso y corre una vez por fallo:
+# el costo de LoggerExtensions frente a un delegado LoggerMessage no se nota, y el delegado
+# haría menos legible justo el código que hay que poder leer cuando algo va mal.
+dotnet_diagnostic.CA1848.severity = none
+
+# Las migraciones las genera EF; no tiene caso corregirle el estilo a código generado.
+[Librex.Infrastructure/Data/Migrations/*.cs]
+generated_code = true
+dotnet_analyzer_diagnostic.severity = none
+
+[Librex.Tests/**/*.cs]
+# Los nombres de prueba usan guiones bajos a propósito: Metodo_Situacion_Resultado se lee
+# mucho mejor en la salida del runner que el mismo nombre en PascalCase.
+dotnet_diagnostic.CA1707.severity = none

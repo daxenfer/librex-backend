@@ -94,7 +94,7 @@ public sealed class ErrorLoggingMiddleware
 
     // ---- Construcción del registro ----
 
-    private async Task<ErrorLog> BuildErrorLogAsync(HttpContext context, Exception ex)
+    private static async Task<ErrorLog> BuildErrorLogAsync(HttpContext context, Exception ex)
     {
         try
         {

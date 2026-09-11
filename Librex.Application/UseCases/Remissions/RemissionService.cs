@@ -120,7 +120,7 @@ public sealed class RemissionService(IRemissionRepository repository) : IRemissi
         {
             Id = r.Id,
             FolioNumber = r.FolioNumber,
-            FolioFormatted = r.FolioNumber.ToString("D6"),
+            FolioFormatted = Folio.Format(r.FolioNumber),
             CustomerId = r.CustomerId,
             CustomerName = r.Customer?.Name ?? string.Empty,
             CustomerAddress = r.Customer?.Address ?? string.Empty,

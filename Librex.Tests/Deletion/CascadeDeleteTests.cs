@@ -11,7 +11,7 @@ namespace Librex.Tests.Deletion;
 // IsActive = false, pero ninguna fila se destruye. La regla que fijan estas pruebas es que nunca
 // se toca un renglón cuyo encabezado sobrevive: eliminar un producto o un proveedor no puede
 // alterar los documentos ya emitidos que los citan.
-public class CascadeDeleteTests : IDisposable
+public sealed class CascadeDeleteTests : IDisposable
 {
     private readonly LibrexDbContext _context = TestDbContextFactory.Create();
 

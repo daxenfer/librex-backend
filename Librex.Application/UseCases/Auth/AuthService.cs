@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -16,6 +17,10 @@ public sealed class AuthService(IUserRepository userRepository,
         IConfiguration configuration,
         TimeProvider clock) : IAuthService
 {
+    // Vigencia del token si Jwt:ExpirationMinutes no está configurado o trae basura: 8 horas,
+    // una jornada de trabajo.
+    private const int DefaultExpirationMinutes = 480;
+
     // Hash de una contraseña que nadie tiene. Se verifica contra él cuando el usuario no existe,
     // para que la respuesta tarde lo mismo que un intento contra una cuenta real: si solo se
     // ejecutara BCrypt en el caso "el usuario existe", el tiempo de respuesta delataría qué
@@ -73,7 +78,7 @@ public sealed class AuthService(IUserRepository userRepository,
         return BuildToken(user);
     }
 
-    private async Task<LoginResponseDto?> RejectAsync(string username, LoginOutcome outcome, LoginRequestContext context, CancellationToken ct = default)
+    private async Task<LoginResponseDto?> RejectAsync(string username, LoginOutcome outcome, LoginRequestContext context)
     {
         await LogAsync(username, outcome, context);
         return null;
@@ -81,7 +86,7 @@ public sealed class AuthService(IUserRepository userRepository,
 
     // La bitácora nunca debe tumbar el login: si la escritura falla, el usuario legítimo entra
     // igual. Se prefiere perder un renglón de auditoría a dejar a alguien fuera del sistema.
-    private async Task LogAsync(string username, LoginOutcome outcome, LoginRequestContext context, CancellationToken ct = default)
+    private async Task LogAsync(string username, LoginOutcome outcome, LoginRequestContext context)
     {
         try
         {
@@ -92,7 +97,11 @@ public sealed class AuthService(IUserRepository userRepository,
                 Outcome = outcome,
                 IpAddress = context.IpAddress,
                 UserAgent = context.UserAgent,
-            }, ct);
+                // CancellationToken.None a propósito, y no el de la petición: el registro del
+                // intento no debe poder cancelarse. Si se propagara el token, bastaría con
+                // abortar la conexión justo después de mandar las credenciales para probar
+                // contraseñas sin dejar rastro en login_attempts.
+            }, CancellationToken.None);
         }
         catch
         {
@@ -106,7 +115,17 @@ public sealed class AuthService(IUserRepository userRepository,
             ?? throw new InvalidOperationException("Jwt:Key is not configured");
         var issuer = configuration["Jwt:Issuer"] ?? "LibrexAPI";
         var audience = configuration["Jwt:Audience"] ?? "LibrexClients";
-        var expirationMinutes = int.Parse(configuration["Jwt:ExpirationMinutes"] ?? "480");
+        // TryParse y no Parse: con Parse, un valor mal escrito en la configuración lanzaba una
+        // FormatException y el login respondía 500. Un valor inválido cae al predeterminado, que
+        // es el lado correcto para equivocarse. Cultura invariante: esto es configuración, no
+        // texto para una persona.
+        var expirationMinutes = int.TryParse(
+            configuration["Jwt:ExpirationMinutes"],
+            NumberStyles.Integer,
+            CultureInfo.InvariantCulture,
+            out var configured) && configured > 0
+                ? configured
+                : DefaultExpirationMinutes;
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -120,7 +139,7 @@ public sealed class AuthService(IUserRepository userRepository,
 
         List<Claim> claims =
         [
-            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new(JwtRegisteredClaimNames.Sub, user.Id.ToString(CultureInfo.InvariantCulture)),
             new(JwtRegisteredClaimNames.UniqueName, user.Username),
             new(ClaimTypes.Name, user.Username),
             new(ClaimTypes.Role, user.Role),

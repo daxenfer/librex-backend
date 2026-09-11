@@ -15,7 +15,7 @@ namespace Librex.Infrastructure.Repositories;
 // repositorio concreto sobrescribe solo lo suyo.
 public abstract class Repository<T>(LibrexDbContext context) : IRepository<T> where T : BaseEntity
 {
-    protected readonly LibrexDbContext Context = context;
+    protected LibrexDbContext Context { get; } = context;
 
     protected DbSet<T> Set => Context.Set<T>();
 

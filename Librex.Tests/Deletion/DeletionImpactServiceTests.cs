@@ -9,7 +9,7 @@ namespace Librex.Tests.Deletion;
 
 // El impacto que se le muestra al usuario tiene dos mitades: Items (lo que se elimina junto con
 // la entidad) y PreservedItems (los documentos ya emitidos que la siguen citando y no se tocan).
-public class DeletionImpactServiceTests : IDisposable
+public sealed class DeletionImpactServiceTests : IDisposable
 {
     private readonly LibrexDbContext _context = TestDbContextFactory.Create();
     private readonly DeletionService _sut;
@@ -91,7 +91,10 @@ public class DeletionImpactServiceTests : IDisposable
         var impact = await _sut.GetImpactAsync(DeletableEntity.Remission, data.Remission1.Id);
 
         Assert.NotNull(impact);
-        Assert.Equal("Folio 1", impact.Label);
+        // El folio se muestra con seis dígitos, igual que en el resto de la aplicación. Antes
+        // este era el único lugar que lo pintaba sin ceros ("Folio 1"), así que el mismo
+        // documento se llamaba distinto en el diálogo de borrado que en la pantalla anterior.
+        Assert.Equal("Folio 000001", impact.Label);
         Assert.Equal(2, CountOf(impact, "Líneas de remisión"));
         Assert.Equal(1, CountOf(impact, "Aplicaciones de pago"));
         Assert.Equal(1, CountOf(impact, "Devoluciones"));

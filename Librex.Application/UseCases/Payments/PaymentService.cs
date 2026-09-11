@@ -18,7 +18,7 @@ public sealed class PaymentService(IPaymentRepository repository, IRemissionRepo
 
     public async Task<PaymentDto> CreateAsync(CreatePaymentDto dto, CancellationToken ct = default)
     {
-        await EnsureAllocationsBelongToCustomerAsync(dto.Allocations, dto.CustomerId);
+        await EnsureAllocationsBelongToCustomerAsync(dto.Allocations, dto.CustomerId, ct);
 
         var folio = await repository.GetNextFolioAsync(ct);
 
@@ -48,7 +48,7 @@ public sealed class PaymentService(IPaymentRepository repository, IRemissionRepo
         var payment = await repository.GetByIdWithCustomerAsync(id, ct);
         if (payment is null) return null;
 
-        await EnsureAllocationsBelongToCustomerAsync(dto.Allocations, dto.CustomerId);
+        await EnsureAllocationsBelongToCustomerAsync(dto.Allocations, dto.CustomerId, ct);
 
         payment.CustomerId = dto.CustomerId;
         payment.Date = dto.Date;
@@ -111,7 +111,7 @@ public sealed class PaymentService(IPaymentRepository repository, IRemissionRepo
         var allocations = p.Allocations.Select(a => new PaymentAllocationDto
         {
             RemissionId = a.RemissionId,
-            RemissionFolioFormatted = a.Remission?.FolioNumber.ToString("D6") ?? string.Empty,
+            RemissionFolioFormatted = Folio.Format(a.Remission?.FolioNumber),
             Amount = a.Amount,
         }).ToList();
 
@@ -121,7 +121,7 @@ public sealed class PaymentService(IPaymentRepository repository, IRemissionRepo
         {
             Id = p.Id,
             FolioNumber = p.FolioNumber,
-            FolioFormatted = p.FolioNumber.ToString("D6"),
+            FolioFormatted = Folio.Format(p.FolioNumber),
             CustomerId = p.CustomerId,
             CustomerName = p.Customer?.Name ?? string.Empty,
             Date = p.Date,

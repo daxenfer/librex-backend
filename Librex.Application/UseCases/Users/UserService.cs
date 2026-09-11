@@ -69,7 +69,7 @@ public sealed class UserService(IUserRepository repository, TimeProvider clock) 
         // Degradar al último SuperAdmin dejaría el sistema sin nadie que administre usuarios, y
         // sin forma de arreglarlo desde la aplicación.
         if (user.Role == Roles.SuperAdmin && role != Roles.SuperAdmin)
-            await EnsureNotLastSuperAdminAsync();
+            await EnsureNotLastSuperAdminAsync(ct);
 
         if (await repository.UsernameExistsAsync(username, id, ct))
             throw new BusinessRuleException($"El usuario \"{username}\" ya existe.");
@@ -123,7 +123,7 @@ public sealed class UserService(IUserRepository repository, TimeProvider clock) 
         EnsureCanTouch(user, actor);
 
         if (user.Role == Roles.SuperAdmin)
-            await EnsureNotLastSuperAdminAsync();
+            await EnsureNotLastSuperAdminAsync(ct);
 
         await repository.DeleteAsync(id, ct);   // baja lógica: IsActive = false
         return true;

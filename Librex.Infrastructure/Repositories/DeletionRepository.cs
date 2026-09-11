@@ -9,7 +9,7 @@ public sealed class DeletionRepository(LibrexDbContext context) : IDeletionRepos
 {
     public async Task<DeletionImpact?> GetImpactAsync(DeletableEntity entity, int id, CancellationToken ct = default)
     {
-        var label = await GetLabelAsync(entity, id);
+        var label = await GetLabelAsync(entity, id, ct);
         if (label is null) return null;
 
         var dependents = await DeletionGraph.ResolveAsync(context, entity, id, ct);
@@ -22,9 +22,9 @@ public sealed class DeletionRepository(LibrexDbContext context) : IDeletionRepos
         DeletableEntity.Customer => Active(await context.Customers.FindAsync([id], ct))?.Name,
         DeletableEntity.Supplier => Active(await context.Suppliers.FindAsync([id], ct))?.Name,
         DeletableEntity.Product => Active(await context.Products.FindAsync([id], ct))?.Name,
-        DeletableEntity.Remission => Folio(Active(await context.Remissions.FindAsync([id], ct))?.FolioNumber),
-        DeletableEntity.ReturnNote => Folio(Active(await context.ReturnNotes.FindAsync([id], ct))?.FolioNumber),
-        DeletableEntity.Payment => Folio(Active(await context.Payments.FindAsync([id], ct))?.FolioNumber),
+        DeletableEntity.Remission => FolioLabel(Active(await context.Remissions.FindAsync([id], ct))?.FolioNumber),
+        DeletableEntity.ReturnNote => FolioLabel(Active(await context.ReturnNotes.FindAsync([id], ct))?.FolioNumber),
+        DeletableEntity.Payment => FolioLabel(Active(await context.Payments.FindAsync([id], ct))?.FolioNumber),
         _ => null,
     };
 
@@ -33,5 +33,6 @@ public sealed class DeletionRepository(LibrexDbContext context) : IDeletionRepos
     private static T? Active<T>(T? entity) where T : BaseEntity
         => entity is { IsActive: true } ? entity : null;
 
-    private static string? Folio(int? folioNumber) => folioNumber is null ? null : $"Folio {folioNumber}";
+    private static string? FolioLabel(int? folioNumber)
+        => folioNumber is null ? null : $"Folio {Domain.Entities.Folio.Format(folioNumber)}";
 }

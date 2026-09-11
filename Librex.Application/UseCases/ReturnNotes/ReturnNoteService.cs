@@ -18,7 +18,7 @@ public sealed class ReturnNoteService(IReturnNoteRepository repository, IRemissi
 
     public async Task<ReturnNoteDto> CreateAsync(CreateReturnNoteDto dto, CancellationToken ct = default)
     {
-        await EnsureRemissionBelongsToCustomerAsync(dto.RemissionId, dto.CustomerId);
+        await EnsureRemissionBelongsToCustomerAsync(dto.RemissionId, dto.CustomerId, ct);
 
         var folio = await repository.GetNextFolioAsync(ct);
 
@@ -50,7 +50,7 @@ public sealed class ReturnNoteService(IReturnNoteRepository repository, IRemissi
         var note = await repository.GetByIdWithDetailsAsync(id, ct);
         if (note is null) return null;
 
-        await EnsureRemissionBelongsToCustomerAsync(dto.RemissionId, dto.CustomerId);
+        await EnsureRemissionBelongsToCustomerAsync(dto.RemissionId, dto.CustomerId, ct);
 
         note.CustomerId = dto.CustomerId;
         note.RemissionId = dto.RemissionId;
@@ -116,11 +116,11 @@ public sealed class ReturnNoteService(IReturnNoteRepository repository, IRemissi
         {
             Id = r.Id,
             FolioNumber = r.FolioNumber,
-            FolioFormatted = r.FolioNumber.ToString("D6"),
+            FolioFormatted = Folio.Format(r.FolioNumber),
             CustomerId = r.CustomerId,
             CustomerName = r.Customer?.Name ?? string.Empty,
             RemissionId = r.RemissionId,
-            RemissionFolioFormatted = r.Remission?.FolioNumber.ToString("D6") ?? string.Empty,
+            RemissionFolioFormatted = Folio.Format(r.Remission?.FolioNumber),
             UnlinkedReason = r.UnlinkedReason,
             Date = r.Date,
             Notes = r.Notes,

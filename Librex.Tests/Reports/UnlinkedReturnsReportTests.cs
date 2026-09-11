@@ -8,7 +8,7 @@ namespace Librex.Tests.Reports;
 // Una devolución sin remisión no se le atribuye a ningún proveedor: se reporta aparte, igual que
 // los anticipos. Estas pruebas fijan esa asimetría y su único límite — el reporte de cantidades,
 // que es de movimiento físico, la sigue contando.
-public class UnlinkedReturnsReportTests : IDisposable
+public sealed class UnlinkedReturnsReportTests : IDisposable
 {
     private readonly LibrexDbContext _context = TestDbContextFactory.Create();
     private readonly ReportRepository _sut;

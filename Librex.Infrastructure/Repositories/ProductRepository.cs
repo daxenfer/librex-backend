@@ -27,7 +27,7 @@ public sealed class ProductRepository(LibrexDbContext context)
     // mapea a DTO de inmediato y sin esto el nombre del proveedor iría vacío.
     public override async Task<Product> AddAsync(Product product, CancellationToken ct = default)
     {
-        await base.AddAsync(product);
-        return await GetByIdAsync(product.Id) ?? product;
+        await base.AddAsync(product, ct);
+        return await GetByIdAsync(product.Id, ct) ?? product;
     }
 }
