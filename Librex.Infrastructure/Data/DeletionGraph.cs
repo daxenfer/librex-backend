@@ -60,14 +60,14 @@ internal sealed class DeletionSet
 // emitidos, cambiando totales impresos y saldos de cuentas por cobrar.
 internal static class DeletionGraph
 {
-    public static Task<DeletionSet> ResolveAsync(LibrexDbContext context, DeletableEntity entity, int id) => entity switch
+    public static Task<DeletionSet> ResolveAsync(LibrexDbContext context, DeletableEntity entity, int id, CancellationToken ct = default) => entity switch
     {
-        DeletableEntity.Customer => ResolveCustomerAsync(context, id),
-        DeletableEntity.Supplier => ResolveSupplierAsync(context, id),
-        DeletableEntity.Product => ResolveProductAsync(context, id),
-        DeletableEntity.Remission => ResolveRemissionAsync(context, id),
-        DeletableEntity.ReturnNote => ResolveReturnNoteAsync(context, id),
-        DeletableEntity.Payment => ResolvePaymentAsync(context, id),
+        DeletableEntity.Customer => ResolveCustomerAsync(context, id, ct),
+        DeletableEntity.Supplier => ResolveSupplierAsync(context, id, ct),
+        DeletableEntity.Product => ResolveProductAsync(context, id, ct),
+        DeletableEntity.Remission => ResolveRemissionAsync(context, id, ct),
+        DeletableEntity.ReturnNote => ResolveReturnNoteAsync(context, id, ct),
+        DeletableEntity.Payment => ResolvePaymentAsync(context, id, ct),
         _ => Task.FromResult(new DeletionSet()),
     };
 
@@ -75,7 +75,7 @@ internal static class DeletionGraph
     // cuentan para poder decirle al usuario que su histórico queda intacto. Es el complemento
     // exacto de lo que ResolveAsync deliberadamente NO se lleva.
     public static async Task<IReadOnlyList<DeletionDependent>> ResolvePreservedAsync(
-        LibrexDbContext context, DeletableEntity entity, int id)
+        LibrexDbContext context, DeletableEntity entity, int id, CancellationToken ct = default)
     {
         List<int> productIds = entity switch
         {
@@ -83,7 +83,7 @@ internal static class DeletionGraph
             DeletableEntity.Supplier => await context.Products
                 .Where(p => p.SupplierId == id)
                 .Select(p => p.Id)
-                .ToListAsync(),
+                .ToListAsync(ct),
             _ => [],
         };
 
@@ -95,13 +95,13 @@ internal static class DeletionGraph
             .Where(d => productIds.Contains(d.ProductId))
             .Select(d => d.RemissionId)
             .Distinct()
-            .CountAsync();
+            .CountAsync(ct);
 
         var returnNotes = await context.ReturnNoteDetails
             .Where(d => productIds.Contains(d.ProductId))
             .Select(d => d.ReturnNoteId)
             .Distinct()
-            .CountAsync();
+            .CountAsync(ct);
 
         return
         [
@@ -116,69 +116,69 @@ internal static class DeletionGraph
     // Un cliente arrastra todos sus documentos: remisiones (con sus líneas), devoluciones
     // (propias o ligadas a alguna de esas remisiones) y pagos (con sus asignaciones). Se van
     // documentos completos, así que ninguno queda mutilado.
-    private static async Task<DeletionSet> ResolveCustomerAsync(LibrexDbContext context, int id)
+    private static async Task<DeletionSet> ResolveCustomerAsync(LibrexDbContext context, int id, CancellationToken ct = default)
     {
-        var remissions = await context.Remissions.Where(r => r.CustomerId == id).ToListAsync();
+        var remissions = await context.Remissions.Where(r => r.CustomerId == id).ToListAsync(ct);
         var remissionIds = remissions.Select(r => r.Id).ToList();
 
         var returnNotes = await context.ReturnNotes
             .Where(n => n.CustomerId == id || (n.RemissionId != null && remissionIds.Contains(n.RemissionId.Value)))
-            .ToListAsync();
+            .ToListAsync(ct);
         var returnNoteIds = returnNotes.Select(n => n.Id).ToList();
 
-        var payments = await context.Payments.Where(p => p.CustomerId == id).ToListAsync();
+        var payments = await context.Payments.Where(p => p.CustomerId == id).ToListAsync(ct);
         var paymentIds = payments.Select(p => p.Id).ToList();
 
         return new DeletionSet
         {
             Remissions = remissions,
             RemissionDetails = await context.RemissionDetails
-                .Where(d => remissionIds.Contains(d.RemissionId)).ToListAsync(),
+                .Where(d => remissionIds.Contains(d.RemissionId)).ToListAsync(ct),
             ReturnNotes = returnNotes,
             ReturnNoteDetails = await context.ReturnNoteDetails
-                .Where(d => returnNoteIds.Contains(d.ReturnNoteId)).ToListAsync(),
+                .Where(d => returnNoteIds.Contains(d.ReturnNoteId)).ToListAsync(ct),
             Payments = payments,
             PaymentAllocations = await context.PaymentAllocations
-                .Where(a => paymentIds.Contains(a.PaymentId) || remissionIds.Contains(a.RemissionId)).ToListAsync(),
+                .Where(a => paymentIds.Contains(a.PaymentId) || remissionIds.Contains(a.RemissionId)).ToListAsync(ct),
         };
     }
 
     // Un proveedor arrastra sus productos, y nada más. Los renglones de remisión y devolución
     // que citan esos productos quedan intactos: pertenecen a documentos que sobreviven.
-    private static async Task<DeletionSet> ResolveSupplierAsync(LibrexDbContext context, int id) => new()
+    private static async Task<DeletionSet> ResolveSupplierAsync(LibrexDbContext context, int id, CancellationToken ct = default) => new()
     {
-        Products = await context.Products.Where(p => p.SupplierId == id).ToListAsync(),
+        Products = await context.Products.Where(p => p.SupplierId == id).ToListAsync(ct),
     };
 
     // Un producto no arrastra nada: sus renglones viven dentro de documentos que sobreviven.
-    private static Task<DeletionSet> ResolveProductAsync(LibrexDbContext context, int id)
+    private static Task<DeletionSet> ResolveProductAsync(LibrexDbContext context, int id, CancellationToken ct = default)
         => Task.FromResult(new DeletionSet());
 
     // Una remisión arrastra sus líneas, las asignaciones de pago que la apuntan y las
     // devoluciones ligadas a ella (RemissionId es nullable, pero se trata como cascada).
     // El pago sobrevive: al perder su asignación, su monto vuelve a quedar como anticipo.
-    private static async Task<DeletionSet> ResolveRemissionAsync(LibrexDbContext context, int id)
+    private static async Task<DeletionSet> ResolveRemissionAsync(LibrexDbContext context, int id, CancellationToken ct = default)
     {
-        var returnNotes = await context.ReturnNotes.Where(n => n.RemissionId == id).ToListAsync();
+        var returnNotes = await context.ReturnNotes.Where(n => n.RemissionId == id).ToListAsync(ct);
         var returnNoteIds = returnNotes.Select(n => n.Id).ToList();
 
         return new DeletionSet
         {
-            RemissionDetails = await context.RemissionDetails.Where(d => d.RemissionId == id).ToListAsync(),
-            PaymentAllocations = await context.PaymentAllocations.Where(a => a.RemissionId == id).ToListAsync(),
+            RemissionDetails = await context.RemissionDetails.Where(d => d.RemissionId == id).ToListAsync(ct),
+            PaymentAllocations = await context.PaymentAllocations.Where(a => a.RemissionId == id).ToListAsync(ct),
             ReturnNotes = returnNotes,
             ReturnNoteDetails = await context.ReturnNoteDetails
-                .Where(d => returnNoteIds.Contains(d.ReturnNoteId)).ToListAsync(),
+                .Where(d => returnNoteIds.Contains(d.ReturnNoteId)).ToListAsync(ct),
         };
     }
 
-    private static async Task<DeletionSet> ResolveReturnNoteAsync(LibrexDbContext context, int id) => new()
+    private static async Task<DeletionSet> ResolveReturnNoteAsync(LibrexDbContext context, int id, CancellationToken ct = default) => new()
     {
-        ReturnNoteDetails = await context.ReturnNoteDetails.Where(d => d.ReturnNoteId == id).ToListAsync(),
+        ReturnNoteDetails = await context.ReturnNoteDetails.Where(d => d.ReturnNoteId == id).ToListAsync(ct),
     };
 
-    private static async Task<DeletionSet> ResolvePaymentAsync(LibrexDbContext context, int id) => new()
+    private static async Task<DeletionSet> ResolvePaymentAsync(LibrexDbContext context, int id, CancellationToken ct = default) => new()
     {
-        PaymentAllocations = await context.PaymentAllocations.Where(a => a.PaymentId == id).ToListAsync(),
+        PaymentAllocations = await context.PaymentAllocations.Where(a => a.PaymentId == id).ToListAsync(ct),
     };
 }

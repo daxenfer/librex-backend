@@ -5,5 +5,5 @@ namespace Librex.Application.UseCases.Deletion;
 
 public interface IDeletionService
 {
-    Task<DeletionImpactDto?> GetImpactAsync(DeletableEntity entity, int id);
+    Task<DeletionImpactDto?> GetImpactAsync(DeletableEntity entity, int id, CancellationToken ct = default);
 }

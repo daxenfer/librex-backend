@@ -11,6 +11,6 @@ public sealed class CustomerRepository(LibrexDbContext context)
 {
     protected override DeletableEntity? DeletionRoot => DeletableEntity.Customer;
 
-    public override async Task<IEnumerable<Customer>> GetAllAsync()
-        => await Set.Where(c => c.IsActive).OrderBy(c => c.Name).ToListAsync();
+    public override async Task<IEnumerable<Customer>> GetAllAsync(CancellationToken ct = default)
+        => await Set.Where(c => c.IsActive).OrderBy(c => c.Name).ToListAsync(ct);
 }

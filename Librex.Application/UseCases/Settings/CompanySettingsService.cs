@@ -6,15 +6,15 @@ namespace Librex.Application.UseCases.Settings;
 
 public sealed class CompanySettingsService(ICompanySettingsRepository repository) : ICompanySettingsService
 {
-    public async Task<CompanySettingsDto> GetAsync()
+    public async Task<CompanySettingsDto> GetAsync(CancellationToken ct = default)
     {
-        var settings = await repository.GetAsync();
+        var settings = await repository.GetAsync(ct);
         return MapToDto(settings);
     }
 
-    public async Task<CompanySettingsDto> UpdateAsync(UpdateCompanySettingsDto dto)
+    public async Task<CompanySettingsDto> UpdateAsync(UpdateCompanySettingsDto dto, CancellationToken ct = default)
     {
-        var settings = await repository.GetAsync();
+        var settings = await repository.GetAsync(ct);
 
         settings.CompanyName = dto.CompanyName;
         settings.BrandName = dto.BrandName;
@@ -28,7 +28,7 @@ public sealed class CompanySettingsService(ICompanySettingsRepository repository
         settings.State = dto.State;
         settings.LogoBase64 = dto.LogoBase64;
 
-        await repository.UpdateAsync(settings);
+        await repository.UpdateAsync(settings, ct);
         return MapToDto(settings);
     }
 

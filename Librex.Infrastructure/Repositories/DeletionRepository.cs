@@ -7,24 +7,24 @@ namespace Librex.Infrastructure.Repositories;
 
 public sealed class DeletionRepository(LibrexDbContext context) : IDeletionRepository
 {
-    public async Task<DeletionImpact?> GetImpactAsync(DeletableEntity entity, int id)
+    public async Task<DeletionImpact?> GetImpactAsync(DeletableEntity entity, int id, CancellationToken ct = default)
     {
         var label = await GetLabelAsync(entity, id);
         if (label is null) return null;
 
-        var dependents = await DeletionGraph.ResolveAsync(context, entity, id);
-        var preserved = await DeletionGraph.ResolvePreservedAsync(context, entity, id);
+        var dependents = await DeletionGraph.ResolveAsync(context, entity, id, ct);
+        var preserved = await DeletionGraph.ResolvePreservedAsync(context, entity, id, ct);
         return new DeletionImpact(entity, id, label, dependents.ToDependents(), preserved);
     }
 
-    private async Task<string?> GetLabelAsync(DeletableEntity entity, int id) => entity switch
+    private async Task<string?> GetLabelAsync(DeletableEntity entity, int id, CancellationToken ct = default) => entity switch
     {
-        DeletableEntity.Customer => Active(await context.Customers.FindAsync(id))?.Name,
-        DeletableEntity.Supplier => Active(await context.Suppliers.FindAsync(id))?.Name,
-        DeletableEntity.Product => Active(await context.Products.FindAsync(id))?.Name,
-        DeletableEntity.Remission => Folio(Active(await context.Remissions.FindAsync(id))?.FolioNumber),
-        DeletableEntity.ReturnNote => Folio(Active(await context.ReturnNotes.FindAsync(id))?.FolioNumber),
-        DeletableEntity.Payment => Folio(Active(await context.Payments.FindAsync(id))?.FolioNumber),
+        DeletableEntity.Customer => Active(await context.Customers.FindAsync([id], ct))?.Name,
+        DeletableEntity.Supplier => Active(await context.Suppliers.FindAsync([id], ct))?.Name,
+        DeletableEntity.Product => Active(await context.Products.FindAsync([id], ct))?.Name,
+        DeletableEntity.Remission => Folio(Active(await context.Remissions.FindAsync([id], ct))?.FolioNumber),
+        DeletableEntity.ReturnNote => Folio(Active(await context.ReturnNotes.FindAsync([id], ct))?.FolioNumber),
+        DeletableEntity.Payment => Folio(Active(await context.Payments.FindAsync([id], ct))?.FolioNumber),
         _ => null,
     };
 

@@ -15,13 +15,13 @@ namespace Librex.API.Controllers;
 public sealed class UsersController(IUserService service) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<UserDto>>> GetAll()
-        => Ok(await service.GetAllAsync());
+    public async Task<ActionResult<IEnumerable<UserDto>>> GetAll(CancellationToken ct)
+        => Ok(await service.GetAllAsync(ct));
 
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<UserDto>> GetById(int id)
+    public async Task<ActionResult<UserDto>> GetById(int id, CancellationToken ct)
     {
-        var user = await service.GetByIdAsync(id);
+        var user = await service.GetByIdAsync(id, ct);
         return user is null ? NotFound() : Ok(user);
     }
 
@@ -32,30 +32,30 @@ public sealed class UsersController(IUserService service) : ControllerBase
     public ActionResult<PermissionMatrixDto> GetPermissionMatrix() => Ok(service.GetPermissionMatrix());
 
     [HttpPost]
-    public async Task<ActionResult<UserDto>> Create([FromBody] CreateUserDto dto)
+    public async Task<ActionResult<UserDto>> Create([FromBody] CreateUserDto dto, CancellationToken ct)
     {
-        var created = await service.CreateAsync(dto, CurrentUser());
+        var created = await service.CreateAsync(dto, CurrentUser(), ct);
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
 
     [HttpPut("{id:int}")]
-    public async Task<ActionResult<UserDto>> Update(int id, [FromBody] UpdateUserDto dto)
+    public async Task<ActionResult<UserDto>> Update(int id, [FromBody] UpdateUserDto dto, CancellationToken ct)
     {
-        var updated = await service.UpdateAsync(id, dto, CurrentUser());
+        var updated = await service.UpdateAsync(id, dto, CurrentUser(), ct);
         return updated is null ? NotFound() : Ok(updated);
     }
 
     [HttpPut("{id:int}/password")]
-    public async Task<IActionResult> ChangePassword(int id, [FromBody] ChangePasswordDto dto)
+    public async Task<IActionResult> ChangePassword(int id, [FromBody] ChangePasswordDto dto, CancellationToken ct)
     {
-        var changed = await service.ChangePasswordAsync(id, dto, CurrentUser());
+        var changed = await service.ChangePasswordAsync(id, dto, CurrentUser(), ct);
         return changed ? NoContent() : NotFound();
     }
 
     [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Delete(int id)
+    public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
-        var deleted = await service.DeleteAsync(id, CurrentUser());
+        var deleted = await service.DeleteAsync(id, CurrentUser(), ct);
         return deleted ? NoContent() : NotFound();
     }
 

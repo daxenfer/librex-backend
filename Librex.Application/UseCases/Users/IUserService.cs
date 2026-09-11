@@ -4,11 +4,11 @@ namespace Librex.Application.UseCases.Users;
 
 public interface IUserService
 {
-    Task<IEnumerable<UserDto>> GetAllAsync();
-    Task<UserDto?> GetByIdAsync(int id);
+    Task<IEnumerable<UserDto>> GetAllAsync(CancellationToken ct = default);
+    Task<UserDto?> GetByIdAsync(int id, CancellationToken ct = default);
     PermissionMatrixDto GetPermissionMatrix();
-    Task<UserDto> CreateAsync(CreateUserDto dto, ActingUser actor);
-    Task<UserDto?> UpdateAsync(int id, UpdateUserDto dto, ActingUser actor);
-    Task<bool> ChangePasswordAsync(int id, ChangePasswordDto dto, ActingUser actor);
-    Task<bool> DeleteAsync(int id, ActingUser actor);
+    Task<UserDto> CreateAsync(CreateUserDto dto, ActingUser actor, CancellationToken ct = default);
+    Task<UserDto?> UpdateAsync(int id, UpdateUserDto dto, ActingUser actor, CancellationToken ct = default);
+    Task<bool> ChangePasswordAsync(int id, ChangePasswordDto dto, ActingUser actor, CancellationToken ct = default);
+    Task<bool> DeleteAsync(int id, ActingUser actor, CancellationToken ct = default);
 }

@@ -25,10 +25,10 @@ public sealed class AuthService(IUserRepository userRepository,
     // Devuelve null en todos los casos de fallo, sin distinguirlos: al usuario se le responde
     // siempre lo mismo. Decirle "cuenta bloqueada" o "ese usuario no existe" le confirmaría a
     // quien ataca qué cuentas son reales. El motivo verdadero queda en login_attempts.
-    public async Task<LoginResponseDto?> LoginAsync(LoginDto dto, LoginRequestContext context)
+    public async Task<LoginResponseDto?> LoginAsync(LoginDto dto, LoginRequestContext context, CancellationToken ct = default)
     {
         var username = dto.Username?.Trim() ?? string.Empty;
-        var user = await userRepository.GetByUsernameAsync(username);
+        var user = await userRepository.GetByUsernameAsync(username, ct);
 
         // Siempre se verifica, exista o no el usuario — ver DummyHash.
         var passwordMatches = BCrypt.Net.BCrypt.Verify(dto.Password, user?.PasswordHash ?? DummyHash);
@@ -54,7 +54,7 @@ public sealed class AuthService(IUserRepository userRepository,
                 user.FailedLoginAttempts = 0;   // el bloqueo sustituye al contador
             }
 
-            await userRepository.UpdateAsync(user);
+            await userRepository.UpdateAsync(user, ct);
             return await RejectAsync(username, LoginOutcome.BadPassword, context);
         }
 
@@ -67,13 +67,13 @@ public sealed class AuthService(IUserRepository userRepository,
         if (string.IsNullOrEmpty(user.SecurityStamp))
             user.SecurityStamp = Guid.NewGuid().ToString("N");
 
-        await userRepository.UpdateAsync(user);
+        await userRepository.UpdateAsync(user, ct);
         await LogAsync(username, LoginOutcome.Success, context);
 
         return BuildToken(user);
     }
 
-    private async Task<LoginResponseDto?> RejectAsync(string username, LoginOutcome outcome, LoginRequestContext context)
+    private async Task<LoginResponseDto?> RejectAsync(string username, LoginOutcome outcome, LoginRequestContext context, CancellationToken ct = default)
     {
         await LogAsync(username, outcome, context);
         return null;
@@ -81,7 +81,7 @@ public sealed class AuthService(IUserRepository userRepository,
 
     // La bitácora nunca debe tumbar el login: si la escritura falla, el usuario legítimo entra
     // igual. Se prefiere perder un renglón de auditoría a dejar a alguien fuera del sistema.
-    private async Task LogAsync(string username, LoginOutcome outcome, LoginRequestContext context)
+    private async Task LogAsync(string username, LoginOutcome outcome, LoginRequestContext context, CancellationToken ct = default)
     {
         try
         {
@@ -92,7 +92,7 @@ public sealed class AuthService(IUserRepository userRepository,
                 Outcome = outcome,
                 IpAddress = context.IpAddress,
                 UserAgent = context.UserAgent,
-            });
+            }, ct);
         }
         catch
         {

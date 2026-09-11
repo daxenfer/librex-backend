@@ -7,20 +7,20 @@ namespace Librex.Application.UseCases.ReturnNotes;
 
 public sealed class ReturnNoteService(IReturnNoteRepository repository, IRemissionRepository remissions) : IReturnNoteService
 {
-    public async Task<IEnumerable<ReturnNoteDto>> GetAllAsync()
-        => (await repository.GetAllWithCustomerAsync()).Select(MapToDto);
+    public async Task<IEnumerable<ReturnNoteDto>> GetAllAsync(CancellationToken ct = default)
+        => (await repository.GetAllWithCustomerAsync(ct)).Select(MapToDto);
 
-    public async Task<ReturnNoteDto?> GetByIdAsync(int id)
+    public async Task<ReturnNoteDto?> GetByIdAsync(int id, CancellationToken ct = default)
     {
-        var note = await repository.GetByIdWithDetailsAsync(id);
+        var note = await repository.GetByIdWithDetailsAsync(id, ct);
         return note is null ? null : MapToDto(note);
     }
 
-    public async Task<ReturnNoteDto> CreateAsync(CreateReturnNoteDto dto)
+    public async Task<ReturnNoteDto> CreateAsync(CreateReturnNoteDto dto, CancellationToken ct = default)
     {
         await EnsureRemissionBelongsToCustomerAsync(dto.RemissionId, dto.CustomerId);
 
-        var folio = await repository.GetNextFolioAsync();
+        var folio = await repository.GetNextFolioAsync(ct);
 
         var note = new ReturnNote
         {
@@ -40,14 +40,14 @@ public sealed class ReturnNoteService(IReturnNoteRepository repository, IRemissi
             }).ToList(),
         };
 
-        var created = await repository.AddAsync(note);
-        var full = await repository.GetByIdWithDetailsAsync(created.Id);
+        var created = await repository.AddAsync(note, ct);
+        var full = await repository.GetByIdWithDetailsAsync(created.Id, ct);
         return MapToDto(full!);
     }
 
-    public async Task<ReturnNoteDto?> UpdateAsync(int id, UpdateReturnNoteDto dto)
+    public async Task<ReturnNoteDto?> UpdateAsync(int id, UpdateReturnNoteDto dto, CancellationToken ct = default)
     {
-        var note = await repository.GetByIdWithDetailsAsync(id);
+        var note = await repository.GetByIdWithDetailsAsync(id, ct);
         if (note is null) return null;
 
         await EnsureRemissionBelongsToCustomerAsync(dto.RemissionId, dto.CustomerId);
@@ -71,26 +71,26 @@ public sealed class ReturnNoteService(IReturnNoteRepository repository, IRemissi
             });
         }
 
-        await repository.UpdateAsync(note);
-        var full = await repository.GetByIdWithDetailsAsync(id);
+        await repository.UpdateAsync(note, ct);
+        var full = await repository.GetByIdWithDetailsAsync(id, ct);
         return MapToDto(full!);
     }
 
-    public async Task<bool> DeleteAsync(int id)
+    public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
     {
-        var note = await repository.GetByIdAsync(id);
+        var note = await repository.GetByIdAsync(id, ct);
         if (note is null) return false;
-        await repository.DeleteAsync(id);
+        await repository.DeleteAsync(id, ct);
         return true;
     }
 
     // Una devolución solo puede colgar de una remisión del mismo cliente. El combo del formulario
     // ya filtra, pero por API no había nada que lo impidiera.
-    private async Task EnsureRemissionBelongsToCustomerAsync(int? remissionId, int customerId)
+    private async Task EnsureRemissionBelongsToCustomerAsync(int? remissionId, int customerId, CancellationToken ct = default)
     {
         if (remissionId is null) return;
 
-        var remission = await remissions.GetByIdAsync(remissionId.Value);
+        var remission = await remissions.GetByIdAsync(remissionId.Value, ct);
         if (remission is null)
             throw new BusinessRuleException("La remisión indicada no existe o fue eliminada.");
         if (remission.CustomerId != customerId)

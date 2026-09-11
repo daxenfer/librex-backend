@@ -22,41 +22,41 @@ public abstract class Repository<T>(LibrexDbContext context) : IRepository<T> wh
     // Qué raíz del grafo de borrado representa esta entidad, o null si no arrastra dependientes.
     protected abstract DeletableEntity? DeletionRoot { get; }
 
-    public virtual async Task<T?> GetByIdAsync(int id)
-        => await Set.FirstOrDefaultAsync(e => e.Id == id && e.IsActive);
+    public virtual async Task<T?> GetByIdAsync(int id, CancellationToken ct = default)
+        => await Set.FirstOrDefaultAsync(e => e.Id == id && e.IsActive, ct);
 
-    public virtual async Task<IEnumerable<T>> GetAllAsync()
-        => await Set.Where(e => e.IsActive).ToListAsync();
+    public virtual async Task<IEnumerable<T>> GetAllAsync(CancellationToken ct = default)
+        => await Set.Where(e => e.IsActive).ToListAsync(ct);
 
-    public virtual async Task<T> AddAsync(T entity)
+    public virtual async Task<T> AddAsync(T entity, CancellationToken ct = default)
     {
         Set.Add(entity);
-        await Context.SaveChangesAsync();
+        await Context.SaveChangesAsync(ct);
         return entity;
     }
 
-    public virtual async Task UpdateAsync(T entity)
+    public virtual async Task UpdateAsync(T entity, CancellationToken ct = default)
     {
         Set.Update(entity);
-        await Context.SaveChangesAsync();
+        await Context.SaveChangesAsync(ct);
     }
 
     // Borrado lógico en cascada: la raíz y sus dependientes se marcan como inactivos en un
     // solo SaveChangesAsync. Nada se destruye, así que los documentos ya emitidos que citan
     // este registro conservan su historia intacta.
-    public virtual async Task DeleteAsync(int id)
+    public virtual async Task DeleteAsync(int id, CancellationToken ct = default)
     {
-        var entity = await Set.FindAsync(id);
+        var entity = await Set.FindAsync([id], ct);
         if (entity is null) return;
 
         if (DeletionRoot is { } root)
         {
-            var dependents = await DeletionGraph.ResolveAsync(Context, root, id);
+            var dependents = await DeletionGraph.ResolveAsync(Context, root, id, ct);
             dependents.Deactivate();
         }
 
         entity.IsActive = false;
-        await Context.SaveChangesAsync();
+        await Context.SaveChangesAsync(ct);
     }
 }
 
@@ -66,9 +66,9 @@ public abstract class DocumentRepository<T>(LibrexDbContext context) : Repositor
 {
     // No filtra IsActive a propósito: el folio de un documento eliminado queda quemado y no se
     // reutiliza, evitando colisiones con el índice único de FolioNumber.
-    public async Task<int> GetNextFolioAsync()
+    public async Task<int> GetNextFolioAsync(CancellationToken ct = default)
     {
-        var max = await Set.Select(d => (int?)d.FolioNumber).MaxAsync();
+        var max = await Set.Select(d => (int?)d.FolioNumber).MaxAsync(ct);
         return (max ?? 0) + 1;
     }
 }

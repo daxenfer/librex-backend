@@ -12,11 +12,11 @@ namespace Librex.API.Controllers;
 public sealed class SettingsController(ICompanySettingsService service) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<CompanySettingsDto>> Get()
-        => Ok(await service.GetAsync());
+    public async Task<ActionResult<CompanySettingsDto>> Get(CancellationToken ct)
+        => Ok(await service.GetAsync(ct));
 
     [HttpPut]
     [Authorize(Policy = Permissions.SettingsManage)]
-    public async Task<ActionResult<CompanySettingsDto>> Update([FromBody] UpdateCompanySettingsDto dto)
-        => Ok(await service.UpdateAsync(dto));
+    public async Task<ActionResult<CompanySettingsDto>> Update([FromBody] UpdateCompanySettingsDto dto, CancellationToken ct)
+        => Ok(await service.UpdateAsync(dto, ct));
 }

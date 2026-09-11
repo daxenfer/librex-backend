@@ -61,8 +61,8 @@ public class ProductServiceTests
     {
         var dto = new CreateProductDto { Name = "New Book" };
 
-        _repo.Setup(r => r.AddAsync(It.IsAny<Product>()))
-            .ReturnsAsync((Product p) => { p.Id = 42; return p; });
+        _repo.Setup(r => r.AddAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Product p, CancellationToken _) => { p.Id = 42; return p; });
 
         var result = await _sut.CreateAsync(dto);
 

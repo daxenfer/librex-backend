@@ -4,6 +4,6 @@ namespace Librex.Application.UseCases.Settings;
 
 public interface ICompanySettingsService
 {
-    Task<CompanySettingsDto> GetAsync();
-    Task<CompanySettingsDto> UpdateAsync(UpdateCompanySettingsDto dto);
+    Task<CompanySettingsDto> GetAsync(CancellationToken ct = default);
+    Task<CompanySettingsDto> UpdateAsync(UpdateCompanySettingsDto dto, CancellationToken ct = default);
 }

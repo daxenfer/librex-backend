@@ -6,16 +6,16 @@ namespace Librex.Application.UseCases.Customers;
 
 public sealed class CustomerService(ICustomerRepository repository) : ICustomerService
 {
-    public async Task<IEnumerable<CustomerDto>> GetAllAsync()
-        => (await repository.GetAllAsync()).Select(MapToDto);
+    public async Task<IEnumerable<CustomerDto>> GetAllAsync(CancellationToken ct = default)
+        => (await repository.GetAllAsync(ct)).Select(MapToDto);
 
-    public async Task<CustomerDto?> GetByIdAsync(int id)
+    public async Task<CustomerDto?> GetByIdAsync(int id, CancellationToken ct = default)
     {
-        var customer = await repository.GetByIdAsync(id);
+        var customer = await repository.GetByIdAsync(id, ct);
         return customer is null ? null : MapToDto(customer);
     }
 
-    public async Task<CustomerDto> CreateAsync(CreateCustomerDto dto)
+    public async Task<CustomerDto> CreateAsync(CreateCustomerDto dto, CancellationToken ct = default)
     {
         var customer = new Customer
         {
@@ -26,12 +26,12 @@ public sealed class CustomerService(ICustomerRepository repository) : ICustomerS
             Phone = dto.Phone,
             City = dto.City,
         };
-        return MapToDto(await repository.AddAsync(customer));
+        return MapToDto(await repository.AddAsync(customer, ct));
     }
 
-    public async Task<CustomerDto?> UpdateAsync(int id, UpdateCustomerDto dto)
+    public async Task<CustomerDto?> UpdateAsync(int id, UpdateCustomerDto dto, CancellationToken ct = default)
     {
-        var customer = await repository.GetByIdAsync(id);
+        var customer = await repository.GetByIdAsync(id, ct);
         if (customer is null) return null;
 
         customer.Name = dto.Name;
@@ -41,15 +41,15 @@ public sealed class CustomerService(ICustomerRepository repository) : ICustomerS
         customer.Phone = dto.Phone;
         customer.City = dto.City;
 
-        await repository.UpdateAsync(customer);
+        await repository.UpdateAsync(customer, ct);
         return MapToDto(customer);
     }
 
-    public async Task<bool> DeleteAsync(int id)
+    public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
     {
-        var customer = await repository.GetByIdAsync(id);
+        var customer = await repository.GetByIdAsync(id, ct);
         if (customer is null) return false;
-        await repository.DeleteAsync(id);
+        await repository.DeleteAsync(id, ct);
         return true;
     }
 

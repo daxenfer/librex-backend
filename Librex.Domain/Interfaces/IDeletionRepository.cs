@@ -21,5 +21,5 @@ public record DeletionImpact(
 public interface IDeletionRepository
 {
     // null si la entidad raíz no existe o ya fue eliminada.
-    Task<DeletionImpact?> GetImpactAsync(DeletableEntity entity, int id);
+    Task<DeletionImpact?> GetImpactAsync(DeletableEntity entity, int id, CancellationToken ct = default);
 }

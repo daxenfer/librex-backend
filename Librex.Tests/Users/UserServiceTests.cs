@@ -22,7 +22,7 @@ public class UserServiceTests
 
     public UserServiceTests()
     {
-        _repo.Setup(r => r.AddAsync(It.IsAny<User>())).ReturnsAsync((User u) => u);
+        _repo.Setup(r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>())).ReturnsAsync((User u, CancellationToken _) => u);
         _sut = new UserService(_repo.Object, new FakeTimeProvider());
     }
 
@@ -40,8 +40,8 @@ public class UserServiceTests
     public async Task CreateAsync_HashesPasswordAndNeverStoresPlainText()
     {
         User? saved = null;
-        _repo.Setup(r => r.AddAsync(It.IsAny<User>()))
-            .ReturnsAsync((User u) => { saved = u; return u; });
+        _repo.Setup(r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((User u, CancellationToken _) => { saved = u; return u; });
 
         var result = await _sut.CreateAsync(NewUser(Roles.User), SuperAdmin);
 
@@ -68,7 +68,7 @@ public class UserServiceTests
     [Fact]
     public async Task CreateAsync_UsernameTaken_Throws()
     {
-        _repo.Setup(r => r.UsernameExistsAsync("nuevo", null)).ReturnsAsync(true);
+        _repo.Setup(r => r.UsernameExistsAsync("nuevo", null, It.IsAny<CancellationToken>())).ReturnsAsync(true);
 
         await Assert.ThrowsAsync<BusinessRuleException>(
             () => _sut.CreateAsync(NewUser(Roles.User), SuperAdmin));
@@ -78,7 +78,7 @@ public class UserServiceTests
     [Fact]
     public async Task CreateAsync_UsernameTakenByInactiveUser_Throws()
     {
-        _repo.Setup(r => r.UsernameExistsAsync(It.IsAny<string>(), It.IsAny<int?>())).ReturnsAsync(true);
+        _repo.Setup(r => r.UsernameExistsAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
         _repo.Setup(r => r.GetByUsernameAsync(It.IsAny<string>())).ReturnsAsync((User?)null);
 
         await Assert.ThrowsAsync<BusinessRuleException>(

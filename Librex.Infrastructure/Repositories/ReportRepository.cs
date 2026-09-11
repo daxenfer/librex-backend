@@ -7,7 +7,7 @@ namespace Librex.Infrastructure.Repositories;
 
 public sealed class ReportRepository(LibrexDbContext context) : IReportRepository
 {
-    public async Task<SupplierReportDto> GetBySupplierAsync(int? supplierId)
+    public async Task<SupplierReportDto> GetBySupplierAsync(int? supplierId, CancellationToken ct = default)
     {
         var salesQuery = context.RemissionDetails
             .Where(d => d.IsActive && d.Remission.IsActive);
@@ -26,7 +26,7 @@ public sealed class ReportRepository(LibrexDbContext context) : IReportRepositor
                 Subtotal = g.Sum(d => d.Quantity * d.UnitPrice),
                 g.Key.Discount
             })
-            .ToListAsync();
+            .ToListAsync(ct);
 
         // Subtotal completo por remisión (sin filtrar por proveedor) para prorratear
         // el descuento, que ahora es un monto fijo de la remisión.
@@ -34,7 +34,7 @@ public sealed class ReportRepository(LibrexDbContext context) : IReportRepositor
             .Where(d => d.IsActive && d.Remission.IsActive)
             .GroupBy(d => d.RemissionId)
             .Select(g => new { RemissionId = g.Key, Subtotal = g.Sum(d => d.Quantity * d.UnitPrice) })
-            .ToDictionaryAsync(x => x.RemissionId, x => x.Subtotal);
+            .ToDictionaryAsync(x => x.RemissionId, x => x.Subtotal, ct);
 
         var sales = byRemission
             .GroupBy(r => new { r.CustomerId, r.CustomerName })
@@ -62,7 +62,7 @@ public sealed class ReportRepository(LibrexDbContext context) : IReportRepositor
         var returns = await returnsQuery
             .GroupBy(d => new { d.ReturnNote.CustomerId, Name = d.ReturnNote.Customer.Name })
             .Select(g => new { g.Key.CustomerId, g.Key.Name, Total = g.Sum(d => d.Quantity * d.UnitPrice) })
-            .ToListAsync();
+            .ToListAsync(ct);
 
         Dictionary<int, (string Name, decimal Total)> paymentsDict;
 
@@ -77,7 +77,7 @@ public sealed class ReportRepository(LibrexDbContext context) : IReportRepositor
                     a.Payment.CustomerId,
                     CustomerName = a.Payment.Customer.Name
                 })
-                .ToListAsync();
+                .ToListAsync(ct);
 
             var remissionShares = await context.RemissionDetails
                 .Where(d => d.IsActive && d.Remission.IsActive)
@@ -87,7 +87,7 @@ public sealed class ReportRepository(LibrexDbContext context) : IReportRepositor
                     g.Key.SupplierId,
                     Amount = g.Sum(d => d.Quantity * d.UnitPrice)
                 })
-                .ToListAsync();
+                .ToListAsync(ct);
 
             var remissionTotals = remissionShares
                 .GroupBy(x => x.RemissionId)
@@ -122,7 +122,7 @@ public sealed class ReportRepository(LibrexDbContext context) : IReportRepositor
             var rawPayments = await context.Payments
                 .Where(p => p.IsActive)
                 .Select(p => new { p.CustomerId, CustomerName = p.Customer.Name, p.Amount })
-                .ToListAsync();
+                .ToListAsync(ct);
 
             paymentsDict = rawPayments
                 .GroupBy(p => new { p.CustomerId, p.CustomerName })
@@ -168,7 +168,7 @@ public sealed class ReportRepository(LibrexDbContext context) : IReportRepositor
         return new SupplierReportDto(supplierId, string.Empty, rows, totals);
     }
 
-    public async Task<SalesByProductReportDto> GetSalesByProductAsync(int? supplierId)
+    public async Task<SalesByProductReportDto> GetSalesByProductAsync(int? supplierId, CancellationToken ct = default)
     {
         var salesQuery = context.RemissionDetails
             .Where(d => d.IsActive && d.Remission.IsActive);
@@ -180,7 +180,7 @@ public sealed class ReportRepository(LibrexDbContext context) : IReportRepositor
                                 d.ProductId, ProductName = d.Product.Name })
             .Select(g => new { g.Key.CustomerId, g.Key.CustomerName,
                                g.Key.ProductId, g.Key.ProductName, Qty = (int)g.Sum(d => d.Quantity) })
-            .ToListAsync();
+            .ToListAsync(ct);
 
         var returnsQuery = context.ReturnNoteDetails
             .Where(d => d.IsActive && d.ReturnNote.IsActive);
@@ -192,7 +192,7 @@ public sealed class ReportRepository(LibrexDbContext context) : IReportRepositor
                                 d.ProductId, ProductName = d.Product.Name })
             .Select(g => new { g.Key.CustomerId, g.Key.CustomerName,
                                g.Key.ProductId, g.Key.ProductName, Qty = (int)g.Sum(d => d.Quantity) })
-            .ToListAsync();
+            .ToListAsync(ct);
 
         // Vendido y devuelto por separado, por (customerId, productId). No se netean: un producto
         // debe verse aunque se haya devuelto más de lo vendido.
@@ -249,7 +249,7 @@ public sealed class ReportRepository(LibrexDbContext context) : IReportRepositor
             productTotalsSold, productTotalsReturned, grandTotalSold, grandTotalReturned);
     }
 
-    public async Task<UnallocatedPaymentsReportDto> GetUnallocatedPaymentsAsync()
+    public async Task<UnallocatedPaymentsReportDto> GetUnallocatedPaymentsAsync(CancellationToken ct = default)
     {
         // Total recibido por cliente (pagos activos).
         var payments = await context.Payments
@@ -260,14 +260,14 @@ public sealed class ReportRepository(LibrexDbContext context) : IReportRepositor
                 g.Key.CustomerName,
                 Total = g.Sum(p => p.Amount)
             })
-            .ToListAsync();
+            .ToListAsync(ct);
 
         // Monto ya aplicado a remisiones por cliente (asignaciones activas de pagos activos).
         var allocated = await context.PaymentAllocations
             .Where(a => a.IsActive && a.Payment.IsActive)
             .GroupBy(a => a.Payment.CustomerId)
             .Select(g => new { CustomerId = g.Key, Amount = g.Sum(a => a.Amount) })
-            .ToDictionaryAsync(x => x.CustomerId, x => x.Amount);
+            .ToDictionaryAsync(x => x.CustomerId, x => x.Amount, ct);
 
         var rows = payments
             .Select(p =>
@@ -285,7 +285,7 @@ public sealed class ReportRepository(LibrexDbContext context) : IReportRepositor
 
     // Espejo de GetUnallocatedPaymentsAsync para el otro lado del mostrador: lo que se devolvió
     // sin decir contra qué venta. Igual que los anticipos, no se atribuye a ningún proveedor.
-    public async Task<UnlinkedReturnsReportDto> GetUnlinkedReturnsAsync()
+    public async Task<UnlinkedReturnsReportDto> GetUnlinkedReturnsAsync(CancellationToken ct = default)
     {
         var notes = await context.ReturnNotes
             .Where(n => n.IsActive && n.RemissionId == null)
@@ -297,7 +297,7 @@ public sealed class ReportRepository(LibrexDbContext context) : IReportRepositor
                 n.UnlinkedReason,
                 Subtotal = n.Details.Where(d => d.IsActive).Sum(d => d.Quantity * d.UnitPrice),
             })
-            .ToListAsync();
+            .ToListAsync(ct);
 
         var rows = notes
             .GroupBy(n => new { n.CustomerId, n.CustomerName })

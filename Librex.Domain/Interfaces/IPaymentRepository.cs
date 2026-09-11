@@ -4,7 +4,7 @@ namespace Librex.Domain.Interfaces;
 
 public interface IPaymentRepository : IRepository<Payment>
 {
-    Task<Payment?> GetByIdWithCustomerAsync(int id);
-    Task<IEnumerable<Payment>> GetAllWithCustomerAsync();
-    Task<int> GetNextFolioAsync();
+    Task<Payment?> GetByIdWithCustomerAsync(int id, CancellationToken ct = default);
+    Task<IEnumerable<Payment>> GetAllWithCustomerAsync(CancellationToken ct = default);
+    Task<int> GetNextFolioAsync(CancellationToken ct = default);
 }

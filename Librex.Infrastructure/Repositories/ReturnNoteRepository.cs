@@ -11,16 +11,16 @@ public sealed class ReturnNoteRepository(LibrexDbContext context)
 {
     protected override DeletableEntity? DeletionRoot => DeletableEntity.ReturnNote;
 
-    public async Task<ReturnNote?> GetByIdWithDetailsAsync(int id)
+    public async Task<ReturnNote?> GetByIdWithDetailsAsync(int id, CancellationToken ct = default)
         => await Set
             .Include(r => r.Customer)
             .Include(r => r.Remission)
             .Include(r => r.Details)
                 .ThenInclude(d => d.Product)
                     .ThenInclude(p => p.Supplier)
-            .FirstOrDefaultAsync(r => r.Id == id && r.IsActive);
+            .FirstOrDefaultAsync(r => r.Id == id && r.IsActive, ct);
 
-    public async Task<IEnumerable<ReturnNote>> GetAllWithCustomerAsync()
+    public async Task<IEnumerable<ReturnNote>> GetAllWithCustomerAsync(CancellationToken ct = default)
         => await Set
             .Include(r => r.Customer)
             .Include(r => r.Remission)
@@ -28,5 +28,5 @@ public sealed class ReturnNoteRepository(LibrexDbContext context)
                 .ThenInclude(d => d.Product)
             .Where(r => r.IsActive)
             .OrderByDescending(r => r.Date)
-            .ToListAsync();
+            .ToListAsync(ct);
 }

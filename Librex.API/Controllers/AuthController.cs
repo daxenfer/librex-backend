@@ -19,9 +19,9 @@ public sealed class AuthController(IAuthService service) : ControllerBase
     [ProducesResponseType(typeof(LoginResponseDto), 200)]
     [ProducesResponseType(401)]
     [ProducesResponseType(429)]
-    public async Task<ActionResult<LoginResponseDto>> Login([FromBody] LoginDto dto)
+    public async Task<ActionResult<LoginResponseDto>> Login([FromBody] LoginDto dto, CancellationToken ct)
     {
-        var result = await service.LoginAsync(dto, BuildContext());
+        var result = await service.LoginAsync(dto, BuildContext(), ct);
         return result is null ? Unauthorized(new { message = "Invalid credentials" }) : Ok(result);
     }
 

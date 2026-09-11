@@ -15,46 +15,46 @@ namespace Librex.API.Controllers;
 public sealed class PaymentsController(IPaymentService service, IDeletionService deletionService) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<PaymentDto>>> GetAll()
-        => Ok(await service.GetAllAsync());
+    public async Task<ActionResult<IEnumerable<PaymentDto>>> GetAll(CancellationToken ct)
+        => Ok(await service.GetAllAsync(ct));
 
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<PaymentDto>> GetById(int id)
+    public async Task<ActionResult<PaymentDto>> GetById(int id, CancellationToken ct)
     {
-        var payment = await service.GetByIdAsync(id);
+        var payment = await service.GetByIdAsync(id, ct);
         return payment is null ? NotFound() : Ok(payment);
     }
 
     [HttpPost]
     [Authorize(Policy = Permissions.PaymentsWrite)]
-    public async Task<ActionResult<PaymentDto>> Create([FromBody] CreatePaymentDto dto)
+    public async Task<ActionResult<PaymentDto>> Create([FromBody] CreatePaymentDto dto, CancellationToken ct)
     {
-        var created = await service.CreateAsync(dto);
+        var created = await service.CreateAsync(dto, ct);
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
 
     [HttpPut("{id:int}")]
     [Authorize(Policy = Permissions.PaymentsWrite)]
-    public async Task<ActionResult<PaymentDto>> Update(int id, [FromBody] UpdatePaymentDto dto)
+    public async Task<ActionResult<PaymentDto>> Update(int id, [FromBody] UpdatePaymentDto dto, CancellationToken ct)
     {
-        var updated = await service.UpdateAsync(id, dto);
+        var updated = await service.UpdateAsync(id, dto, ct);
         return updated is null ? NotFound() : Ok(updated);
     }
 
     // Qué se va a borrar en cascada junto con esta entidad. Se consulta antes del DELETE
     // para que el usuario confirme con el impacto a la vista.
     [HttpGet("{id:int}/deletion-impact")]
-    public async Task<ActionResult<DeletionImpactDto>> GetDeletionImpact(int id)
+    public async Task<ActionResult<DeletionImpactDto>> GetDeletionImpact(int id, CancellationToken ct)
     {
-        var impact = await deletionService.GetImpactAsync(DeletableEntity.Payment, id);
+        var impact = await deletionService.GetImpactAsync(DeletableEntity.Payment, id, ct);
         return impact is null ? NotFound() : Ok(impact);
     }
 
     [HttpDelete("{id:int}")]
     [Authorize(Policy = Permissions.PaymentsDelete)]
-    public async Task<IActionResult> Delete(int id)
+    public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
-        var deleted = await service.DeleteAsync(id);
+        var deleted = await service.DeleteAsync(id, ct);
         return deleted ? NoContent() : NotFound();
     }
 }

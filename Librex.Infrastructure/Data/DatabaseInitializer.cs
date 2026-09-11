@@ -16,11 +16,11 @@ public static class DatabaseInitializer
     // o con la variable de entorno Seed__AdminPassword.
     private const string DefaultSeedPassword = "Admin1234!*";
 
-    public static async Task SeedAsync(LibrexDbContext context, TimeProvider clock, string? adminPassword = null)
+    public static async Task SeedAsync(LibrexDbContext context, TimeProvider clock, string? adminPassword = null, CancellationToken ct = default)
     {
-        await context.Database.MigrateAsync();
+        await context.Database.MigrateAsync(ct);
 
-        if (!await context.Users.AnyAsync())
+        if (!await context.Users.AnyAsync(ct))
         {
             var password = string.IsNullOrWhiteSpace(adminPassword) ? DefaultSeedPassword : adminPassword;
 
@@ -33,21 +33,21 @@ public static class DatabaseInitializer
                 CreatedAt = clock.GetUtcNow().UtcDateTime,
                 IsActive = true,
             });
-            await context.SaveChangesAsync();
+            await context.SaveChangesAsync(ct);
             return;
         }
 
         // Instalaciones creadas antes de que existieran los roles: su usuario semilla quedó como
         // Administrator y, sin esto, nadie podría entrar a administrar usuarios. Solo corre cuando
         // no hay NINGÚN SuperAdmin activo, así que después del primer arranque es un no-op.
-        if (!await context.Users.AnyAsync(u => u.Role == Roles.SuperAdmin && u.IsActive))
+        if (!await context.Users.AnyAsync(u => u.Role == Roles.SuperAdmin && u.IsActive, ct))
         {
-            var seedUser = await context.Users.FirstOrDefaultAsync(u => u.Username == SeedUsername && u.IsActive);
+            var seedUser = await context.Users.FirstOrDefaultAsync(u => u.Username == SeedUsername && u.IsActive, ct);
             if (seedUser is not null)
             {
                 seedUser.Role = Roles.SuperAdmin;
                 seedUser.ModifiedAt = clock.GetUtcNow().UtcDateTime;
-                await context.SaveChangesAsync();
+                await context.SaveChangesAsync(ct);
             }
         }
     }

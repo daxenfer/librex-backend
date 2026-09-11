@@ -10,12 +10,12 @@ namespace Librex.Application.UseCases.Users;
 // son de negocio, y el frontend solo las refleja deshabilitando botones.
 public sealed class UserService(IUserRepository repository, TimeProvider clock) : IUserService
 {
-    public async Task<IEnumerable<UserDto>> GetAllAsync()
-        => (await repository.GetAllAsync()).Select(MapToDto);
+    public async Task<IEnumerable<UserDto>> GetAllAsync(CancellationToken ct = default)
+        => (await repository.GetAllAsync(ct)).Select(MapToDto);
 
-    public async Task<UserDto?> GetByIdAsync(int id)
+    public async Task<UserDto?> GetByIdAsync(int id, CancellationToken ct = default)
     {
-        var user = await repository.GetByIdAsync(id);
+        var user = await repository.GetByIdAsync(id, ct);
         return user is null || !user.IsActive ? null : MapToDto(user);
     }
 
@@ -29,7 +29,7 @@ public sealed class UserService(IUserRepository repository, TimeProvider clock) 
         Grants = Roles.All.ToDictionary(role => role, role => Permissions.ForRole(role).ToArray()),
     };
 
-    public async Task<UserDto> CreateAsync(CreateUserDto dto, ActingUser actor)
+    public async Task<UserDto> CreateAsync(CreateUserDto dto, ActingUser actor, CancellationToken ct = default)
     {
         var role = dto.Role.Trim();
         var username = dto.Username.Trim();
@@ -37,7 +37,7 @@ public sealed class UserService(IUserRepository repository, TimeProvider clock) 
         EnsureRoleExists(role);
         EnsureCanAssign(role, actor);
 
-        if (await repository.UsernameExistsAsync(username))
+        if (await repository.UsernameExistsAsync(username, ct: ct))
             throw new BusinessRuleException($"El usuario \"{username}\" ya existe.");
 
         var user = new User
@@ -48,12 +48,12 @@ public sealed class UserService(IUserRepository repository, TimeProvider clock) 
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
         };
 
-        return MapToDto(await repository.AddAsync(user));
+        return MapToDto(await repository.AddAsync(user, ct));
     }
 
-    public async Task<UserDto?> UpdateAsync(int id, UpdateUserDto dto, ActingUser actor)
+    public async Task<UserDto?> UpdateAsync(int id, UpdateUserDto dto, ActingUser actor, CancellationToken ct = default)
     {
-        var user = await repository.GetByIdAsync(id);
+        var user = await repository.GetByIdAsync(id, ct);
         if (user is null || !user.IsActive) return null;
 
         var role = dto.Role.Trim();
@@ -71,7 +71,7 @@ public sealed class UserService(IUserRepository repository, TimeProvider clock) 
         if (user.Role == Roles.SuperAdmin && role != Roles.SuperAdmin)
             await EnsureNotLastSuperAdminAsync();
 
-        if (await repository.UsernameExistsAsync(username, id))
+        if (await repository.UsernameExistsAsync(username, id, ct))
             throw new BusinessRuleException($"El usuario \"{username}\" ya existe.");
 
         // El rol y el nombre de usuario viajan dentro del token. Si cambian, hay que renovar el
@@ -85,13 +85,13 @@ public sealed class UserService(IUserRepository repository, TimeProvider clock) 
         user.ModifiedAt = clock.GetUtcNow().UtcDateTime;
         if (identityChanged) user.SecurityStamp = Guid.NewGuid().ToString("N");
 
-        await repository.UpdateAsync(user);
+        await repository.UpdateAsync(user, ct);
         return MapToDto(user);
     }
 
-    public async Task<bool> ChangePasswordAsync(int id, ChangePasswordDto dto, ActingUser actor)
+    public async Task<bool> ChangePasswordAsync(int id, ChangePasswordDto dto, ActingUser actor, CancellationToken ct = default)
     {
-        var user = await repository.GetByIdAsync(id);
+        var user = await repository.GetByIdAsync(id, ct);
         if (user is null || !user.IsActive) return false;
 
         EnsureCanTouch(user, actor);
@@ -108,13 +108,13 @@ public sealed class UserService(IUserRepository repository, TimeProvider clock) 
         user.FailedLoginAttempts = 0;
         user.LockedOutUntil = null;
 
-        await repository.UpdateAsync(user);
+        await repository.UpdateAsync(user, ct);
         return true;
     }
 
-    public async Task<bool> DeleteAsync(int id, ActingUser actor)
+    public async Task<bool> DeleteAsync(int id, ActingUser actor, CancellationToken ct = default)
     {
-        var user = await repository.GetByIdAsync(id);
+        var user = await repository.GetByIdAsync(id, ct);
         if (user is null || !user.IsActive) return false;
 
         if (id == actor.Id)
@@ -125,7 +125,7 @@ public sealed class UserService(IUserRepository repository, TimeProvider clock) 
         if (user.Role == Roles.SuperAdmin)
             await EnsureNotLastSuperAdminAsync();
 
-        await repository.DeleteAsync(id);   // baja lógica: IsActive = false
+        await repository.DeleteAsync(id, ct);   // baja lógica: IsActive = false
         return true;
     }
 
@@ -153,9 +153,9 @@ public sealed class UserService(IUserRepository repository, TimeProvider clock) 
             throw new BusinessRuleException("No puedes modificar a un usuario con más alcance que el tuyo.");
     }
 
-    private async Task EnsureNotLastSuperAdminAsync()
+    private async Task EnsureNotLastSuperAdminAsync(CancellationToken ct = default)
     {
-        if (await repository.CountActiveByRoleAsync(Roles.SuperAdmin) <= 1)
+        if (await repository.CountActiveByRoleAsync(Roles.SuperAdmin, ct) <= 1)
             throw new BusinessRuleException("Debe quedar al menos un super administrador activo.");
     }
 

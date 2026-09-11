@@ -6,9 +6,9 @@ namespace Librex.Application.UseCases.Deletion;
 
 public sealed class DeletionService(IDeletionRepository repository) : IDeletionService
 {
-    public async Task<DeletionImpactDto?> GetImpactAsync(DeletableEntity entity, int id)
+    public async Task<DeletionImpactDto?> GetImpactAsync(DeletableEntity entity, int id, CancellationToken ct = default)
     {
-        var impact = await repository.GetImpactAsync(entity, id);
+        var impact = await repository.GetImpactAsync(entity, id, ct);
         return impact is null ? null : MapToDto(impact);
     }
 

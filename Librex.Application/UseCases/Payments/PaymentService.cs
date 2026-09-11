@@ -7,20 +7,20 @@ namespace Librex.Application.UseCases.Payments;
 
 public sealed class PaymentService(IPaymentRepository repository, IRemissionRepository remissions) : IPaymentService
 {
-    public async Task<IEnumerable<PaymentDto>> GetAllAsync()
-        => (await repository.GetAllWithCustomerAsync()).Select(MapToDto);
+    public async Task<IEnumerable<PaymentDto>> GetAllAsync(CancellationToken ct = default)
+        => (await repository.GetAllWithCustomerAsync(ct)).Select(MapToDto);
 
-    public async Task<PaymentDto?> GetByIdAsync(int id)
+    public async Task<PaymentDto?> GetByIdAsync(int id, CancellationToken ct = default)
     {
-        var payment = await repository.GetByIdWithCustomerAsync(id);
+        var payment = await repository.GetByIdWithCustomerAsync(id, ct);
         return payment is null ? null : MapToDto(payment);
     }
 
-    public async Task<PaymentDto> CreateAsync(CreatePaymentDto dto)
+    public async Task<PaymentDto> CreateAsync(CreatePaymentDto dto, CancellationToken ct = default)
     {
         await EnsureAllocationsBelongToCustomerAsync(dto.Allocations, dto.CustomerId);
 
-        var folio = await repository.GetNextFolioAsync();
+        var folio = await repository.GetNextFolioAsync(ct);
 
         var payment = new Payment
         {
@@ -38,14 +38,14 @@ public sealed class PaymentService(IPaymentRepository repository, IRemissionRepo
             Allocations = BuildAllocations(dto.Allocations),
         };
 
-        var created = await repository.AddAsync(payment);
-        var full = await repository.GetByIdWithCustomerAsync(created.Id);
+        var created = await repository.AddAsync(payment, ct);
+        var full = await repository.GetByIdWithCustomerAsync(created.Id, ct);
         return MapToDto(full!);
     }
 
-    public async Task<PaymentDto?> UpdateAsync(int id, UpdatePaymentDto dto)
+    public async Task<PaymentDto?> UpdateAsync(int id, UpdatePaymentDto dto, CancellationToken ct = default)
     {
-        var payment = await repository.GetByIdWithCustomerAsync(id);
+        var payment = await repository.GetByIdWithCustomerAsync(id, ct);
         if (payment is null) return null;
 
         await EnsureAllocationsBelongToCustomerAsync(dto.Allocations, dto.CustomerId);
@@ -65,28 +65,28 @@ public sealed class PaymentService(IPaymentRepository repository, IRemissionRepo
         foreach (var a in BuildAllocations(dto.Allocations))
             payment.Allocations.Add(a);
 
-        await repository.UpdateAsync(payment);
-        var full = await repository.GetByIdWithCustomerAsync(id);
+        await repository.UpdateAsync(payment, ct);
+        var full = await repository.GetByIdWithCustomerAsync(id, ct);
         return MapToDto(full!);
     }
 
-    public async Task<bool> DeleteAsync(int id)
+    public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
     {
-        var payment = await repository.GetByIdAsync(id);
+        var payment = await repository.GetByIdAsync(id, ct);
         if (payment is null) return false;
-        await repository.DeleteAsync(id);
+        await repository.DeleteAsync(id, ct);
         return true;
     }
 
     // Un pago solo puede aplicarse a remisiones del mismo cliente. El editor de reparto ya solo
     // ofrece las suyas, pero por API no había nada que lo impidiera.
     private async Task EnsureAllocationsBelongToCustomerAsync(
-        IEnumerable<CreatePaymentAllocationDto> allocations, int customerId)
+        IEnumerable<CreatePaymentAllocationDto> allocations, int customerId, CancellationToken ct = default)
     {
         var remissionIds = allocations.Where(a => a.Amount > 0).Select(a => a.RemissionId).Distinct();
         foreach (var remissionId in remissionIds)
         {
-            var remission = await remissions.GetByIdAsync(remissionId);
+            var remission = await remissions.GetByIdAsync(remissionId, ct);
             if (remission is null)
                 throw new BusinessRuleException("Una de las remisiones del reparto no existe o fue eliminada.");
             if (remission.CustomerId != customerId)

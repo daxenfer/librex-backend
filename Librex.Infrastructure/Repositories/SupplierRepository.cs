@@ -11,6 +11,6 @@ public sealed class SupplierRepository(LibrexDbContext context)
 {
     protected override DeletableEntity? DeletionRoot => DeletableEntity.Supplier;
 
-    public override async Task<IEnumerable<Supplier>> GetAllAsync()
-        => await Set.Where(s => s.IsActive).OrderBy(s => s.Name).ToListAsync();
+    public override async Task<IEnumerable<Supplier>> GetAllAsync(CancellationToken ct = default)
+        => await Set.Where(s => s.IsActive).OrderBy(s => s.Name).ToListAsync(ct);
 }

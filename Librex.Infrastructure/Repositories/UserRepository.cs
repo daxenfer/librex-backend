@@ -16,15 +16,15 @@ public sealed class UserRepository(LibrexDbContext context)
     // A propósito NO filtra por IsActive: el login necesita distinguir "no existe" de "está
     // dado de baja" para poder registrarlo en la bitácora, y la validación del token necesita
     // encontrar al usuario desactivado para poder rechazarlo. Quien llama decide si lo deja pasar.
-    public override async Task<User?> GetByIdAsync(int id)
-        => await Set.FirstOrDefaultAsync(u => u.Id == id);
+    public override async Task<User?> GetByIdAsync(int id, CancellationToken ct = default)
+        => await Set.FirstOrDefaultAsync(u => u.Id == id, ct);
 
-    public async Task<User?> GetByUsernameAsync(string username)
-        => await Set.FirstOrDefaultAsync(u => u.Username == username);
+    public async Task<User?> GetByUsernameAsync(string username, CancellationToken ct = default)
+        => await Set.FirstOrDefaultAsync(u => u.Username == username, ct);
 
-    public async Task<bool> UsernameExistsAsync(string username, int? excludeId = null)
-        => await Set.AnyAsync(u => u.Username == username && (excludeId == null || u.Id != excludeId));
+    public async Task<bool> UsernameExistsAsync(string username, int? excludeId = null, CancellationToken ct = default)
+        => await Set.AnyAsync(u => u.Username == username && (excludeId == null || u.Id != excludeId), ct);
 
-    public async Task<int> CountActiveByRoleAsync(string role)
-        => await Set.CountAsync(u => u.Role == role && u.IsActive);
+    public async Task<int> CountActiveByRoleAsync(string role, CancellationToken ct = default)
+        => await Set.CountAsync(u => u.Role == role && u.IsActive, ct);
 }
